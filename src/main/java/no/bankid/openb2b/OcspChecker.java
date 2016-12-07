@@ -12,7 +12,6 @@ import java.security.cert.*;
 import java.security.cert.Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.SomeUtils.getSubjectDNElement;
 
 public class OcspChecker {
 
@@ -66,15 +65,13 @@ public class OcspChecker {
         // extract the certification path from the list of Certificates
         CertPath messageSignerPath = SomeUtils.CERTIFICATE_FACTORY.generateCertPath(messageSignerCertificateChain);
 
-        X509Certificate messageSignerCertificateIssuer = (X509Certificate) messageSignerPath.getCertificates().get(1);
-        X509Certificate messageSignerCertificate = (X509Certificate) messageSignerPath.getCertificates().get(0);
-
-        byte[] rawOcspResponse = ocspChecker.getOcspResponse(messageSignerCertificate, messageSignerCertificateIssuer);
+        byte[] rawOcspResponse = ocspChecker.getOcspResponse(messageSignerPath);
 
         ocspChecker.validateOcspResponse(messageSignerPath, rawOcspResponse);
     }
 
-    private void validateOcspResponse(CertPath messageSignerPath, byte[] rawOcspResponse) throws CertificateException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
+    public void validateOcspResponse(CertPath messageSignerPath, byte[] rawOcspResponse)
+            throws CertificateException, InvalidAlgorithmParameterException, NoSuchAlgorithmException, NoSuchProviderException {
         Map<X509Certificate, byte[]> prCertificateOcspResponses = new HashMap<>();
         X509Certificate messageSignerCertificate = (X509Certificate) messageSignerPath.getCertificates().get(0);
         prCertificateOcspResponses.put(messageSignerCertificate, rawOcspResponse);
@@ -93,20 +90,32 @@ public class OcspChecker {
         params.setRevocationEnabled(true);
         params.addCertPathChecker(revocationChecker);
         try {
-            System.out.println("Checking Ocsp for certificate " + messageSignerCertificate.getSubjectX500Principal().getName("RFC1779"));
+            System.out.println("Validates OCSP response for certificate " + messageSignerCertificate.getSubjectX500Principal().getName("RFC1779"));
             CertPathValidator.getInstance("PKIX").validate(messageSignerPath, params);
             System.out.println("Status is OK");
 
         } catch (CertPathValidatorException e) {
             e.printStackTrace();
             X509Certificate certificate = (X509Certificate) e.getCertPath().getCertificates().get(e.getIndex());
-            String commonName = getSubjectDNElement(certificate, "CN");
-            System.out.println(commonName + ": " + e.getReason());
+            System.out.println(certificate.getSubjectX500Principal().getName("RFC1779") + ": " + e.getReason());
+            throw new IllegalStateException(e);
         }
 
     }
 
-    private byte[] getOcspResponse(X509Certificate messageSignerCertificate, X509Certificate messageSignerCertificateIssuer) {
+    /**
+     * Sends a signed request to the BankID Va based and return its response unvalidated.
+     * This is the call which generates a billing to the owner of the OCSP signer certificate owner.
+     * @param messageSignerPath the signerpath
+     * @return the response received
+     */
+    public byte[] getOcspResponse(CertPath messageSignerPath) {
+
+
+        X509Certificate messageSignerCertificateIssuer = (X509Certificate) messageSignerPath.getCertificates().get(1);
+        X509Certificate messageSignerCertificate = (X509Certificate) messageSignerPath.getCertificates().get(0);
+        System.out.println("Sending OCSP request for certificate " + messageSignerCertificate.getSubjectX500Principal().getName("RFC1779"));
+
         return new OcspRequester().sendOcspRequestGetResponse(messageSignerCertificate, messageSignerCertificateIssuer, ocspRequestSignerCertificateChain, ocspSignerKey);
     }
 

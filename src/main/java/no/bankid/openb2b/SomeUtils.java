@@ -127,16 +127,6 @@ public class SomeUtils {
         }
     }
 
-    static String getSubjectDNElement(X509Certificate x509Certificate, String elementName) {
-        String rfc1779SubjectName = x509Certificate.getSubjectX500Principal().getName("RFC1779");
-        for (String namesAndValues : rfc1779SubjectName.split(",")) {
-            String[] nameAndValue = namesAndValues.split("=");
-            if (nameAndValue[0].trim().equals(elementName)) {
-                return nameAndValue[1];
-            }
-        }
-        return "<not found>";
-    }
     /**
      * Return a boolean array representing passed in keyUsage mask.
      *
