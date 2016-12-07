@@ -8,7 +8,23 @@
     <artifactId>bankid-open-b2b-examples</artifactId>
     <version>1.0.0-SNAPSHOT</version>
 
-    <description>Example code for BankID Open B2B.</description>
+    <description>
+        Example code for BankID Open B2B. See https://confluence.bankidnorge.no/confluence/display/DEVPUB/BankID+Open+B2B for
+        complete BankID Open B2B documentation.
+    </description>
+
+    <developers>
+        <developer>
+            <name>Svein Otto Solem</name>
+            <organization>Kantega AS</organization>
+            <organizationUrl>https://www.kantega.no</organizationUrl>
+        </developer>
+        <developer>
+            <name>Håvard Kvam Buvik</name>
+            <organization>Kantega AS</organization>
+            <organizationUrl>https://www.kantega.no</organizationUrl>
+        </developer>
+    </developers>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
