@@ -30,19 +30,21 @@ import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivateKey;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.OcspChecker.BEGIN_CERTIFICATE;
-import static no.bankid.openb2b.OcspChecker.END_CERTIFICATE;
+import static no.bankid.openb2b.SomeUtils.BEGIN_CERTIFICATE;
+import static no.bankid.openb2b.SomeUtils.END_CERTIFICATE;
+import static no.bankid.openb2b.SomeUtils.toCertificateHolder;
 
 public class OcspRequester {
     private final static Logger LOGGER = LoggerFactory.getLogger(OcspRequester.class);
     private static final int CONNECT_TIMEOUT_MS = 15000;
 
     /**
+     * See RFC6960 for details.
+     *
      * @param certToBeValidated must contain the authorityInfoAccessExtension holding the url for the va service and the certificate serialnumber
      * @param issuerCert        issuer of certToBeValidated, used together with certToBeValidated's serialnumber
      * @param signerChain       used for signing the ocsp request to the va service, used if nonempty
@@ -53,6 +55,8 @@ public class OcspRequester {
                                              List<? extends java.security.cert.Certificate> signerChain, PrivateKey signerKey) {
 
         final URL ocspUrlFromCertificate = getOcspUrlFromCertificate(certToBeValidated);
+        LOGGER.debug("Connecting to instance.toString() = " + ocspUrlFromCertificate);
+
         final OCSPReq ocspReq;
         BigInteger nonce = BigInteger.valueOf(System.currentTimeMillis());
         try {
@@ -60,19 +64,18 @@ public class OcspRequester {
                     new CertificateID(new JcaDigestCalculatorProviderBuilder().build().get(CertificateID.HASH_SHA1),
                             new JcaX509CertificateHolder(issuerCert), certToBeValidated.getSerialNumber());
 
-            LOGGER.debug("Connecting to instance.toString() = " + ocspUrlFromCertificate);
-
             OCSPReqBuilder ocspReqBuilder = new OCSPReqBuilder();
-            ocspReqBuilder.addRequest(id);
+            ocspReqBuilder.addRequest(id); // a certificate is identified using it's issuer and it's serialnumber.
 
-            // create details for nonce extension
+            // Place a nonce in the request, to prevent attack
             Extension ocspNonce = new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, nonce.toByteArray());
             ocspReqBuilder.setRequestExtensions(new Extensions(ocspNonce));
 
+            // Sign request if signerchain is given, all BankID VA's demands signed ocsp requests.
             if (signerChain != null && !signerChain.isEmpty()) {
                 final List<X509CertificateHolder> x509CertificateHolders = toCertificateHolder(signerChain);
-                ocspReqBuilder.setRequestorName(x509CertificateHolders.get(0).getSubject());
-                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder("SHA256WithRSA").build(signerKey),
+                ocspReqBuilder.setRequestorName(x509CertificateHolders.get(0).getSubject()); // Mandatory to set the requestorname
+                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder("SHA256withRSA").build(signerKey),
                         x509CertificateHolders.toArray(new X509CertificateHolder[signerChain.size()]));
             } else {
                 ocspReq = ocspReqBuilder.build();
@@ -141,18 +144,6 @@ public class OcspRequester {
         } catch (IOException e) {
             throw new IllegalStateException("Could not determine revooation status due to io error ", e);
         }
-    }
-
-    private List<X509CertificateHolder> toCertificateHolder(List<? extends Certificate> signerChain) {
-        List<X509CertificateHolder> ret = new ArrayList<>();
-        for (Certificate c : signerChain) {
-            try {
-                ret.add(new JcaX509CertificateHolder((X509Certificate) c));
-            } catch (CertificateEncodingException e) {
-                throw new IllegalArgumentException(e);
-            }
-        }
-        return ret;
     }
 
     private void checkResult(byte[] ocspResponseBytes, BigInteger expectedNonceValue) {
