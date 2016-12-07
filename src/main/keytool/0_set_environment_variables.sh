@@ -6,7 +6,7 @@ JAVA_HOME="set_path_to_your_java_bin_directory"
 ORIGINATOR="BINAS"
 
 # Change to actual common name.
-COMMON_NAME="B2B MERCHANT AS"
+COMMON_NAME="Merchant A"
 
 KEY_STORE="${COMMON_NAME}.jks"
 AUTH_CSR="${COMMON_NAME}-auth.csr"

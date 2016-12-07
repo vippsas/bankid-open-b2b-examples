@@ -6,7 +6,7 @@ OPENSSL_HOME="/usr/bin"
 ORIGINATOR="BINAS"
 
 # Change to actual common name.
-COMMON_NAME="B2B MERCHANT AS"
+COMMON_NAME="Merchant B"
 
 AUTH_KEY="${COMMON_NAME}-auth.pem"
 SIGN_KEY="${COMMON_NAME}-sign.pem"
