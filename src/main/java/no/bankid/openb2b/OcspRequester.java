@@ -34,9 +34,8 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.SomeUtils.BEGIN_CERTIFICATE;
-import static no.bankid.openb2b.SomeUtils.END_CERTIFICATE;
-import static no.bankid.openb2b.SomeUtils.toCertificateHolder;
+import static no.bankid.openb2b.SomeUtils.Algos.SHA256withRSA;
+import static no.bankid.openb2b.SomeUtils.*;
 
 public class OcspRequester {
     private final static Logger LOGGER = LoggerFactory.getLogger(OcspRequester.class);
@@ -75,7 +74,7 @@ public class OcspRequester {
             if (signerChain != null && !signerChain.isEmpty()) {
                 final List<X509CertificateHolder> x509CertificateHolders = toCertificateHolder(signerChain);
                 ocspReqBuilder.setRequestorName(x509CertificateHolders.get(0).getSubject()); // Mandatory to set the requestorname
-                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder("SHA256withRSA").build(signerKey),
+                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder(SHA256withRSA.name()).build(signerKey),
                         x509CertificateHolders.toArray(new X509CertificateHolder[signerChain.size()]));
             } else {
                 ocspReq = ocspReqBuilder.build();

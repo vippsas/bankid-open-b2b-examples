@@ -1,8 +1,12 @@
 package no.bankid.openb2b;
 
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
+import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -14,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 public class SomeUtils {
+
     static final String BEGIN_CERTIFICATE = "-----BEGIN CERTIFICATE-----\n";
     static final String END_CERTIFICATE = "-----END CERTIFICATE-----\n";
     static final String BANKID_ROOT_CERTIFICATE_PREPROD = BEGIN_CERTIFICATE
@@ -87,7 +92,7 @@ public class SomeUtils {
         Security.addProvider(new BouncyCastleProvider());
         try {
             RESOURCES_PATH = Paths.get(OcspChecker.class.getResource("/").toURI());
-            CERTIFICATE_FACTORY = CertificateFactory.getInstance("X.509", "BC");
+            CERTIFICATE_FACTORY = CertificateFactory.getInstance("X.509");
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -155,18 +160,35 @@ public class SomeUtils {
      * <p>
      * Note: the path is built with revocation checking turned off.
      */
-    public static PKIXCertPathBuilderResult buildPath(
+    public static CertPath buildPath(
             X509Certificate  rootCert,
             X509CertSelector endConstraints,
             CertStore certsAndCRLs)
             throws Exception
     {
-        CertPathBuilder       builder = CertPathBuilder.getInstance("PKIX", "BC");
+        CertPathBuilder       builder = CertPathBuilder.getInstance("PKIX");
         PKIXBuilderParameters buildParams = new PKIXBuilderParameters(Collections.singleton(new TrustAnchor(rootCert, null)), endConstraints);
 
         buildParams.addCertStore(certsAndCRLs);
         buildParams.setRevocationEnabled(false);
 
-        return (PKIXCertPathBuilderResult)builder.build(buildParams);
+        return builder.build(buildParams).getCertPath();
+    }
+
+    public enum Algos { // Name of this enum may be used as is.
+        SHA256(new DefaultDigestAlgorithmIdentifierFinder().find("SHA256")),
+        SHA256withRSA(new DefaultSignatureAlgorithmIdentifierFinder().find("SHA256withRSA")),
+        RSA(new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption));
+
+        private final AlgorithmIdentifier algorithmIdentifier;
+
+        Algos(AlgorithmIdentifier algorithmIdentifier) {
+
+            this.algorithmIdentifier = algorithmIdentifier;
+        }
+
+        public AlgorithmIdentifier asId() {
+            return algorithmIdentifier;
+        }
     }
 }

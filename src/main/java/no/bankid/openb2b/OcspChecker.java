@@ -80,7 +80,7 @@ public class OcspChecker {
         prCertificateOcspResponses.put(messageSignerCertificate, rawOcspResponse);
 
         // Build an ocsp revocation checker
-        PKIXRevocationChecker revocationChecker = (PKIXRevocationChecker) CertPathValidator.getInstance("PKIX","BC").getRevocationChecker();
+        PKIXRevocationChecker revocationChecker = (PKIXRevocationChecker) CertPathValidator.getInstance("PKIX").getRevocationChecker();
         // Tell the ocsp revocation checker who is signing the ocsp response, the actual value used may be found in the debug log for OcspRequester
         revocationChecker.setOcspResponderCert(netsVAOCSPResponderCert);
         revocationChecker.setOptions(EnumSet.of(PKIXRevocationChecker.Option.ONLY_END_ENTITY));
@@ -94,7 +94,7 @@ public class OcspChecker {
         params.addCertPathChecker(revocationChecker);
         try {
             System.out.println("Checking Ocsp for certificate " + messageSignerCertificate.getSubjectX500Principal().getName("RFC1779"));
-            CertPathValidator.getInstance("PKIX","BC").validate(messageSignerPath, params);
+            CertPathValidator.getInstance("PKIX").validate(messageSignerPath, params);
             System.out.println("Status is OK");
 
         } catch (CertPathValidatorException e) {
