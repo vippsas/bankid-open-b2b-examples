@@ -1,12 +1,9 @@
 package no.bankid.openb2b;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.*;
 import java.security.cert.*;
 import java.security.cert.Certificate;
@@ -65,7 +62,7 @@ public class OcspChecker {
         // extract the certification path from the list of Certificates
         CertPath messageSignerPath = SomeUtils.CERTIFICATE_FACTORY.generateCertPath(messageSignerCertificateChain);
 
-        byte[] rawOcspResponse = ocspChecker.getOcspResponse(messageSignerPath);
+        byte[] rawOcspResponse = ocspChecker.getOcspResponseFromVa(messageSignerPath);
 
         ocspChecker.validateOcspResponse(messageSignerPath, rawOcspResponse);
     }
@@ -109,7 +106,7 @@ public class OcspChecker {
      * @param messageSignerPath the signerpath
      * @return the response received
      */
-    public byte[] getOcspResponse(CertPath messageSignerPath) {
+    public byte[] getOcspResponseFromVa(CertPath messageSignerPath) {
 
 
         X509Certificate messageSignerCertificateIssuer = (X509Certificate) messageSignerPath.getCertificates().get(1);

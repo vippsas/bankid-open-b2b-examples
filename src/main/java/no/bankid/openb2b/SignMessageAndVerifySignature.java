@@ -59,10 +59,10 @@ public class SignMessageAndVerifySignature {
                 certificatesVector.add(c.toASN1Structure());
             }
 
-            SignedData signedData = new SignedData(
+            SignedData signedData = new SignedData(  // TODO: vurder å bruke CMSSignedDataGenerator, da slipper vi å tenke på BER/DER etc.
                     new DERSet(toASN1EncodableVector(SHA256.asId())),
                     detachedContentInfo,
-                    new DERSet(certificatesVector),
+                    new BERSet(certificatesVector),
                     null,
                     new DERSet(toASN1EncodableVector(signerInfo)));
 
@@ -95,7 +95,7 @@ public class SignMessageAndVerifySignature {
             }
 
             // Check revocation state for our own signing certificate and add the signed response to the CMS
-            byte[] ocspResponseBytes = ocspChecker.getOcspResponse(messageSignerPath);
+            byte[] ocspResponseBytes = ocspChecker.getOcspResponseFromVa(messageSignerPath);
             ocspChecker.validateOcspResponse(messageSignerPath, ocspResponseBytes); // Still only throws if not ok, TODO: make it return a usable value ?
 
             OCSPResponse ocspResponse = OCSPResponse.getInstance(ocspResponseBytes);
@@ -117,7 +117,7 @@ public class SignMessageAndVerifySignature {
 
     private SignerInfo createSignerInfo(X509CertificateHolder signerCertificate, ASN1OctetString dtbsDigest, PrivateKey privateKey)
             throws NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException, NoSuchProviderException {
-        ASN1EncodableVector authAttribVector = toASN1EncodableVector(
+        ASN1EncodableVector authAttribVector = toASN1EncodableVector( // This is the same attributes as BIDJServer adds to the CMS
                 new Attribute(CMSAttributes.contentType, new DERSet(PKCSObjectIdentifiers.data)),
                 new Attribute(CMSAttributes.messageDigest, new DERSet(dtbsDigest)),
                 new Attribute(CMSAttributes.signingTime, new DERSet(new Time(new Date()))),
@@ -149,6 +149,8 @@ public class SignMessageAndVerifySignature {
      * Handles verification of a signed message.
      */
     public boolean verifySignedMessageAndDetachedCMS(X509Certificate rootCert, byte dtbs[], byte[] base64EncodedCMS, OcspChecker ocspChecker) throws Exception {
+
+        System.out.println("\nVerifies a signed message");
         final byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
 
         CMSSignedData signedData = new CMSSignedData(new CMSProcessableByteArray(dtbs), cmsBytesBlock);
@@ -168,16 +170,19 @@ public class SignMessageAndVerifySignature {
 
             Store<DERSequence> otherRevocationInfoStore = signedData.getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
             Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
-            if (!allOtherRevocationInfos.isEmpty()) {
+
+            byte [] ocspResponse;
+            if (allOtherRevocationInfos.isEmpty()) {
+                System.out.println("Checking revocation state by asking VA");
+                // We have to check the signing certificate ourselves by sending an OCSP request
+                ocspResponse = ocspChecker.getOcspResponseFromVa(certPath);
+            } else {
                 // Sender has inserted ocsp response
                 System.out.println("Checking embedded OCSP response ");
                 // We handle only the first, in case of more than one, these should be handled
-                ocspChecker.validateOcspResponse(certPath, OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded());
-            } else {
-                System.out.println("Checking revocation state by asking VA");
-                // We have to check the signing certificate ourselves by sending an OCSP request
-                ocspChecker.validateOcspResponse(certPath, ocspChecker.getOcspResponse(certPath));
+                 ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
             }
+            ocspChecker.validateOcspResponse(certPath, ocspResponse);
 
             X509Certificate signerCertificate = (X509Certificate) certificates.get(0);
 
