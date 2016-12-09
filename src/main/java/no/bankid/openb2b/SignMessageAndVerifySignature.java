@@ -25,7 +25,7 @@ import java.security.cert.*;
 import java.security.cert.Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.SomeUtils.Algos.*;
+import static no.bankid.openb2b.Algos.*;
 import static no.bankid.openb2b.SomeUtils.*;
 
 public class SignMessageAndVerifySignature {

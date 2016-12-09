@@ -34,7 +34,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.SomeUtils.Algos.SHA256withRSA;
+import static no.bankid.openb2b.Algos.SHA256withRSA;
 import static no.bankid.openb2b.SomeUtils.*;
 
 public class OcspRequester {

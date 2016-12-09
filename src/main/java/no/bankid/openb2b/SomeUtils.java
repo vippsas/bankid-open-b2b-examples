@@ -165,20 +165,4 @@ public class SomeUtils {
         return builder.build(buildParams).getCertPath();
     }
 
-    public enum Algos { // Name of this enum may be used as is.
-        SHA256(new DefaultDigestAlgorithmIdentifierFinder().find("SHA256")),
-        SHA256withRSA(new DefaultSignatureAlgorithmIdentifierFinder().find("SHA256withRSA")),
-        RSA(new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption));
-
-        private final AlgorithmIdentifier algorithmIdentifier;
-
-        Algos(AlgorithmIdentifier algorithmIdentifier) {
-
-            this.algorithmIdentifier = algorithmIdentifier;
-        }
-
-        public AlgorithmIdentifier asId() {
-            return algorithmIdentifier;
-        }
-    }
 }
