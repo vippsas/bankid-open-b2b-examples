@@ -1,12 +1,8 @@
 package no.bankid.openb2b;
 
-import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
-import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -91,7 +87,7 @@ public class SomeUtils {
         // Use BouncyCastle as an additional crypto provider.
         Security.addProvider(new BouncyCastleProvider());
         try {
-            RESOURCES_PATH = Paths.get(OcspChecker.class.getResource("/").toURI());
+            RESOURCES_PATH = Paths.get(BankIDStatusChecker.class.getResource("/").toURI());
             CERTIFICATE_FACTORY = CertificateFactory.getInstance("X.509");
         } catch (Exception e) {
             throw new IllegalStateException(e);

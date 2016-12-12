@@ -5,7 +5,7 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
 
-public enum Algos { // Name of this enum may be used as is.
+public enum Algorithms { // Name of this enum may be used as is.
 
     SHA256(new DefaultDigestAlgorithmIdentifierFinder().find("SHA256")),
     SHA256withRSA(new DefaultSignatureAlgorithmIdentifierFinder().find("SHA256withRSA")),
@@ -13,8 +13,7 @@ public enum Algos { // Name of this enum may be used as is.
 
     private final AlgorithmIdentifier algorithmIdentifier;
 
-    Algos(AlgorithmIdentifier algorithmIdentifier) {
-
+    Algorithms(AlgorithmIdentifier algorithmIdentifier) {
         this.algorithmIdentifier = algorithmIdentifier;
     }
 
