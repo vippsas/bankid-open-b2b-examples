@@ -6,13 +6,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
-import java.security.PrivateKey;
 import java.security.cert.CertPath;
-import java.security.cert.Certificate;
-import java.util.List;
 
-import static java.util.Arrays.asList;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
 /**
@@ -26,6 +21,8 @@ public class ReceiverVerifiesBankIDStatusIT {
     // Provided to toggle between PREPROD/PROD.
     private final BankIDEnvironment env = BankIDEnvironment.PREPROD;
 
+    private final MerchantA merchantA = new MerchantA();
+    private final MerchantB merchantB = new MerchantB();
     private static final byte[] DTBS = "Hello World".getBytes(StandardCharsets.UTF_8);
 
 
@@ -35,25 +32,17 @@ public class ReceiverVerifiesBankIDStatusIT {
         OcspResponderSslTrust.init(env);
 
         // Given: Merchant A signs data and creates a detached signature, without OCSP check.
-        KeyStore senderKeystore = KeyStore.getInstance("JKS");
-        senderKeystore.load(MerchantA.KEYSTORE_URL.openStream(), MerchantA.KEY_PASSWORD);
-        CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(asList(senderKeystore.getCertificateChain (MerchantA.KEY_ALIAS)));
-        PrivateKey senderSignKey = (PrivateKey) senderKeystore.getKey(MerchantA.KEY_ALIAS, MerchantA.KEY_PASSWORD);
-
-        byte[] detachedSignature = Signer.signWithoutOCSPResponse(DTBS, senderCertPath, senderSignKey);
+        CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(merchantA.getCertList());
+        byte[] detachedSignature = Signer.signWithoutOCSPResponse(DTBS, senderCertPath, merchantA.getPrivateKey());
 
 
         // When: Merchant A sends data and detached signature to Merchant B over the wire (not shown here).
-       LOGGER.info("Merchant A sends data and detached signature (without OCSP check) to Merchant B.");
+        LOGGER.info("Merchant A sends data and detached signature (without OCSP check) to Merchant B.");
 
 
         // Then: Merchant B verifies received data with detached signature.
-        KeyStore receiverKeystore = KeyStore.getInstance("JKS");
-        receiverKeystore.load(MerchantB.KEYSTORE_URL.openStream(), MerchantB.KEYSTORE_PASSWORD);
-        List<Certificate> receiverCertList = asList(receiverKeystore.getCertificateChain(MerchantB.KEY_ALIAS));
-        PrivateKey receiverSignKey = (PrivateKey) receiverKeystore.getKey(MerchantB.KEY_ALIAS, MerchantB.KEY_PASSWORD);
-
-        BankIDStatusChecker bankIDStatusChecker = new BankIDStatusChecker(env, receiverSignKey, receiverCertList);
+        BankIDStatusChecker bankIDStatusChecker =
+                new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
         boolean signatureVerified =
                 Verifier.verifyDetachedSignature(env.getBankIDRootCert(), DTBS, detachedSignature, bankIDStatusChecker);
 

@@ -5,7 +5,7 @@ import java.io.InputStream;
 
 public class OcspResponderCertPreprod {
 
-    static final String OCSP_RESPONDER_CERTIFICATE_PREPROD =
+    private static final String OCSP_RESPONDER_CERTIFICATE_PREPROD =
             "-----BEGIN CERTIFICATE-----\n" +
                     "MIIExzCCAq+gAwIBAgICA+swDQYJKoZIhvcNAQELBQAwcTELMAkGA1UEBhMCTk8x\n" +
                     "KjAoBgNVBAoMIVRFU1QgLSBGTkggb2cgU3BhcmViYW5rZm9yZW5pbmdlbjEWMBQG\n" +

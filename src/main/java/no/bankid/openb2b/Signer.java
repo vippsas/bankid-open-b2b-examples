@@ -14,7 +14,6 @@ import org.bouncycastle.cms.CMSSignedData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.security.*;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
@@ -25,19 +24,13 @@ import java.util.Date;
 
 import static no.bankid.openb2b.Algorithms.*;
 
+/**
+ * See rfc5652 (https://tools.ietf.org/html/rfc5652) for details about cms content.
+ */
 public class Signer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Signer.class);
 
-    /**
-     * See rfc5652 for details about cms content. See BankID (TODO finn doc) for hva som må være med.
-     *
-     * @param dataToBeSigned
-     * @param signerCertPath
-     * @param signerKey
-     * @return detached signature
-     * @throws InvalidKeyException
-     */
     public static byte[] signWithoutOCSPResponse(byte[] dataToBeSigned,
                                                  CertPath signerCertPath,
                                                  PrivateKey signerKey) {
@@ -117,12 +110,9 @@ public class Signer {
 
     private static SignerInfo createSignerInfo(X509CertificateHolder signerCertificate,
                                                ASN1OctetString dtbsDigest,
-                                               PrivateKey privateKey)
-            throws NoSuchAlgorithmException, IOException, SignatureException, InvalidKeyException,
-            NoSuchProviderException {
+                                               PrivateKey privateKey) throws Exception {
 
-        ASN1EncodableVector authAttribVector = toASN1EncodableVector( // This is the same attributes as BIDJServer
-                // adds to the CMS
+        ASN1EncodableVector authAttribVector = toASN1EncodableVector(
                 new Attribute(CMSAttributes.contentType, new DERSet(PKCSObjectIdentifiers.data)),
                 new Attribute(CMSAttributes.messageDigest, new DERSet(dtbsDigest)),
                 new Attribute(CMSAttributes.signingTime, new DERSet(new Time(new Date()))),
@@ -135,12 +125,14 @@ public class Signer {
         IssuerAndSerialNumber signerId = new IssuerAndSerialNumber(signerCertificate.getIssuer(), signerCertificate
                 .getSerialNumber());
 
+        // ! Remark: an empty unauthenticatedAttributes is not handled the same as null
+        ASN1Set unauthenticatedAttributes = null;
         return new SignerInfo(new SignerIdentifier(signerId),
                 SHA512.asId(),
                 authenticatedAttributes,
                 RSA.asId(),
                 new DEROctetString(signData(privateKey, authenticatedAttributes.getEncoded())),
-                null); // ! Remark: an empty set here is not handled the same as null
+                unauthenticatedAttributes);
     }
 
     private static byte[] signData(PrivateKey privateKey, byte[] toBeSigned) throws NoSuchAlgorithmException,

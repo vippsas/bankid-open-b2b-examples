@@ -28,6 +28,7 @@ public enum BankIDEnvironment {
     }
 
     X509Certificate getOcspResponderCert() {
+        // TODO: Lag preprod jks på nytt, med innhold fra brukerstedspakken.
         // TODO: PROD
         InputStream certStream = name().equals(PREPROD.name()) ? OcspResponderCertPreprod.getInputStream() : null;
         try {

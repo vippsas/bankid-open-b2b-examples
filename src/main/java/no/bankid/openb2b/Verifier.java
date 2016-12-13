@@ -49,12 +49,9 @@ public class Verifier {
 
             if (allOtherRevocationInfos.isEmpty()) {
                 LOGGER.info("Checking revocation state by asking VA");
-                // We have to check the signing certificate ourselves by sending an OCSP request
                 bankIDStatusChecker.validateCertPathAndOcspResponseOnline(certPath);
             } else {
-                // Sender has inserted ocsp response
-                LOGGER.info("Checking embedded OCSP response ");
-                // TODO: We handle only the first, in case of more than one, these should be handled
+                LOGGER.info("Checking embedded OCSP response");
                 byte[] ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
                 bankIDStatusChecker.validateCertPathAndOcspResponseOffline(certPath, ocspResponse);
             }

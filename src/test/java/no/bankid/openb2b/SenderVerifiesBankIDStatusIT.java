@@ -6,13 +6,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.util.List;
 
-import static java.util.Arrays.asList;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
 /**
@@ -26,6 +24,8 @@ public class SenderVerifiesBankIDStatusIT {
     // Provided to toggle between PREPROD/PROD.
     private final BankIDEnvironment env = BankIDEnvironment.PREPROD;
 
+    private final MerchantA merchantA = new MerchantA();
+    private final MerchantB merchantB = new MerchantB();
     private static final byte[] DTBS = "Hello World".getBytes(StandardCharsets.UTF_8);
 
 
@@ -35,13 +35,10 @@ public class SenderVerifiesBankIDStatusIT {
         OcspResponderSslTrust.init(env);
 
         // Given: Merchant A signs data and creates a detached signature, with OCSP check embedded.
-        KeyStore senderKeystore = KeyStore.getInstance("JKS");
-        senderKeystore.load(MerchantA.KEYSTORE_URL.openStream(), MerchantA.KEYSTORE_PASSWORD);
-        List<Certificate> senderCertList = asList(senderKeystore.getCertificateChain(MerchantA.KEY_ALIAS));
+        List<Certificate> senderCertList = merchantA.getCertList();
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(senderCertList);
-        PrivateKey senderSignKey = (PrivateKey) senderKeystore.getKey(MerchantA.KEY_ALIAS, MerchantA.KEY_PASSWORD);
+        PrivateKey senderSignKey = merchantA.getPrivateKey();
         BankIDStatusChecker senderBankIDStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
-
         byte[] detachedSignature =
                 Signer.signWithValidatedOCSPResponse(DTBS, senderCertPath, senderSignKey, senderBankIDStatusChecker);
 
@@ -51,14 +48,11 @@ public class SenderVerifiesBankIDStatusIT {
 
 
         // Then: Merchant B verifies received data with detached signature.
-        KeyStore receiverKeystore = KeyStore.getInstance("JKS");
-        receiverKeystore.load(MerchantB.KEYSTORE_URL.openStream(), MerchantB.KEYSTORE_PASSWORD);
-        List<Certificate> receiverCertList = asList(receiverKeystore.getCertificateChain(MerchantB.KEY_ALIAS));
-        PrivateKey receiverSignKey = (PrivateKey) receiverKeystore.getKey(MerchantB.KEY_ALIAS, MerchantB.KEY_PASSWORD);
-
-        BankIDStatusChecker receiverBankIDStatusChecker = new BankIDStatusChecker(env, receiverSignKey, receiverCertList);
+        BankIDStatusChecker receiverBankIDStatusChecker =
+                new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
         boolean signatureVerified =
-                Verifier.verifyDetachedSignature(env.getBankIDRootCert(), DTBS, detachedSignature, receiverBankIDStatusChecker);
+                Verifier.verifyDetachedSignature(env.getBankIDRootCert(), DTBS, detachedSignature,
+                        receiverBankIDStatusChecker);
 
 
         Assert.assertTrue(signatureVerified);
