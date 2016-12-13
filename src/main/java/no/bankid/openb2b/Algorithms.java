@@ -7,8 +7,8 @@ import org.bouncycastle.operator.DefaultSignatureAlgorithmIdentifierFinder;
 
 public enum Algorithms { // Name of this enum may be used as is.
 
-    SHA256(new DefaultDigestAlgorithmIdentifierFinder().find("SHA256")),
-    SHA256withRSA(new DefaultSignatureAlgorithmIdentifierFinder().find("SHA256withRSA")),
+    SHA512(new DefaultDigestAlgorithmIdentifierFinder().find("SHA512")),
+    SHA512withRSA(new DefaultSignatureAlgorithmIdentifierFinder().find("SHA512withRSA")),
     RSA(new AlgorithmIdentifier(PKCSObjectIdentifiers.rsaEncryption));
 
     private final AlgorithmIdentifier algorithmIdentifier;

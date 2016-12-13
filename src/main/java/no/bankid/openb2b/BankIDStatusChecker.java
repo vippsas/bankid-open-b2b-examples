@@ -3,9 +3,6 @@ package no.bankid.openb2b;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.cert.*;
 import java.util.*;
@@ -17,8 +14,10 @@ public class BankIDStatusChecker {
 
     private final Set<TrustAnchor> trustAnchors;
     private final X509Certificate ocspResponderCert;
-    private final List<? extends Certificate> signerCertificateChain;
+    private final List<? extends Certificate> signerCertChain;
     private final PrivateKey signerKey;
+    private final Set<PKIXRevocationChecker.Option> revocationCheckerOptions;
+    private final OcspRequester ocspRequester;
 
 
     public BankIDStatusChecker(BankIDEnvironment environment,
@@ -26,41 +25,32 @@ public class BankIDStatusChecker {
                                List<? extends Certificate> signerCertChain) {
         this.trustAnchors = Collections.singleton(new TrustAnchor(environment.getBankIDRootCert(), null));
         this.ocspResponderCert = environment.getOcspResponderCert();
+        this.revocationCheckerOptions = environment.getRevocationCheckerOptions();
         this.signerKey = signerKey;
-        this.signerCertificateChain = signerCertChain;
+        this.signerCertChain = signerCertChain;
+        ocspRequester = new OcspRequester();
     }
 
-    /**
-     * Sends a signed request to the BankID Va based and return its response unvalidated.
-     * This is the call which generates a billing to the owner of the OCSP signer certificate owner.
-     *
-     * @param signerPath the signerpath
-     * @return the response received
-     */
-    public byte[] getOcspResponseFromVa(CertPath signerPath)
-            throws NoSuchAlgorithmException, CertificateException, InvalidAlgorithmParameterException,
-            NoSuchProviderException {
+    public byte[] validateCertPathAndOcspResponseOnline(CertPath targetPath) throws Exception {
 
-        X509Certificate signerCertificateIssuer = (X509Certificate) signerPath.getCertificates().get(1);
-        X509Certificate signerCertificate = (X509Certificate) signerPath.getCertificates().get(0);
-        LOGGER.info("Sending OCSP request for certificate {}", signerCertificate.getSubjectX500Principal().getName
-                ("RFC1779"));
+        X509Certificate targetCertIssuer = (X509Certificate) targetPath.getCertificates().get(1);
+        X509Certificate targetCert = (X509Certificate) targetPath.getCertificates().get(0);
+        LOGGER.info("Sending OCSP request for certificate {}",
+                targetCert.getSubjectX500Principal().getName("RFC1779"));
 
-        byte[] ocspResponse = new OcspRequester().sendOcspRequestGetResponse(signerCertificate,
-                signerCertificateIssuer, signerCertificateChain, signerKey);
+        byte[] ocspResponse =
+                ocspRequester.sendOcspRequestGetResponse(targetCert, targetCertIssuer, signerCertChain, signerKey);
 
-        validateCertPathAndOcspResponseOffline(signerPath, ocspResponse);
+        validateCertPathAndOcspResponseOffline(targetPath, ocspResponse);
 
         return ocspResponse;
     }
 
-    public void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse)
-            throws CertificateException, InvalidAlgorithmParameterException, NoSuchAlgorithmException,
-            NoSuchProviderException {
+    public void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse) throws Exception {
 
-        Map<X509Certificate, byte[]> prCertificateOcspResponses = new HashMap<>();
+        Map<X509Certificate, byte[]> ocspResponses = new HashMap<>();
         X509Certificate signerCertificate = (X509Certificate) signerPath.getCertificates().get(0);
-        prCertificateOcspResponses.put(signerCertificate, rawOcspResponse);
+        ocspResponses.put(signerCertificate, rawOcspResponse);
 
         // Build an ocsp revocation checker
         PKIXRevocationChecker revocationChecker =
@@ -68,8 +58,8 @@ public class BankIDStatusChecker {
         // Tell the ocsp revocation checker who is signing the ocsp response, the actual value used may
         // be found in the debug log for OcspRequester
         revocationChecker.setOcspResponderCert(ocspResponderCert);
-        revocationChecker.setOptions(EnumSet.of(PKIXRevocationChecker.Option.ONLY_END_ENTITY));
-        revocationChecker.setOcspResponses(prCertificateOcspResponses);
+        revocationChecker.setOptions(revocationCheckerOptions);
+        revocationChecker.setOcspResponses(ocspResponses);
 
         PKIXParameters params = new PKIXParameters(trustAnchors);
 
@@ -83,10 +73,9 @@ public class BankIDStatusChecker {
             LOGGER.info("BankID status is OK");
 
         } catch (CertPathValidatorException e) {
-            e.printStackTrace();
             X509Certificate certificate = (X509Certificate) e.getCertPath().getCertificates().get(e.getIndex());
             LOGGER.info("{}: {}", certificate.getSubjectX500Principal().getName("RFC1779"), e.getReason());
-            throw new IllegalStateException(e);
+            throw e;
         }
     }
 }

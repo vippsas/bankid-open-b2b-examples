@@ -5,7 +5,10 @@ import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.CertificateException;
+import java.security.cert.PKIXRevocationChecker;
 import java.security.cert.X509Certificate;
+import java.util.EnumSet;
+import java.util.Set;
 
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
@@ -47,5 +50,11 @@ public enum BankIDEnvironment {
     public String getOcspResponderSslTrustStorePassword() {
         // TODO: PROD
         return name().equals(PREPROD.name()) ? "changeit" : null;
+    }
+
+    public Set<PKIXRevocationChecker.Option> getRevocationCheckerOptions() {
+        return name().equals(PREPROD.name()) ?
+                EnumSet.of(PKIXRevocationChecker.Option.ONLY_END_ENTITY) :
+                EnumSet.of(PKIXRevocationChecker.Option.NO_FALLBACK);
     }
 }

@@ -22,21 +22,14 @@ public class Verifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Verifier.class);
 
-    @SuppressWarnings("unchecked")
-    /**
-     * Handles verification of a signed message.
-     */
-    public static boolean verifyDataAndDetachedCMS(X509Certificate rootCert,
-                                                   byte dtbs[],
-                                                   byte[] base64EncodedCMS,
-                                                   BankIDStatusChecker bankIDStatusChecker) throws Exception {
+    public static boolean verifyDetachedSignature(X509Certificate rootCert,
+                                                  byte dtbs[],
+                                                  byte[] base64EncodedCMS,
+                                                  BankIDStatusChecker bankIDStatusChecker) throws Exception {
 
         byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
-
         CMSSignedData signedData = new CMSSignedData(new CMSProcessableByteArray(dtbs), cmsBytesBlock);
-
         CertStore certsAndCRLs = new JcaCertStoreBuilder().addCertificates(signedData.getCertificates()).build();
-
         SignerInformationStore signers = signedData.getSignerInfos();
         Iterator it = signers.getSigners().iterator();
 
@@ -50,14 +43,14 @@ public class Verifier {
             X509Certificate signerCertificate = (X509Certificate) certificates.get(0);
             LOGGER.info("Message was signed by '{}'", signerCertificate.getSubjectX500Principal().getName("RFC1779"));
 
-            Store<DERSequence> otherRevocationInfoStore = signedData.getOtherRevocationInfo(OCSPObjectIdentifiers
-                    .id_pkix_ocsp_response);
+            @SuppressWarnings("unchecked") Store<DERSequence> otherRevocationInfoStore =
+                    signedData.getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
             Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
 
             if (allOtherRevocationInfos.isEmpty()) {
                 LOGGER.info("Checking revocation state by asking VA");
                 // We have to check the signing certificate ourselves by sending an OCSP request
-                bankIDStatusChecker.getOcspResponseFromVa(certPath);
+                bankIDStatusChecker.validateCertPathAndOcspResponseOnline(certPath);
             } else {
                 // Sender has inserted ocsp response
                 LOGGER.info("Checking embedded OCSP response ");
@@ -72,11 +65,6 @@ public class Verifier {
         return false;
     }
 
-    /**
-     * Return a boolean array representing passed in keyUsage mask.
-     *
-     * @param mask keyUsage mask.
-     */
     private static boolean[] getKeyUsage(int mask) {
         byte[] bytes = new byte[]{(byte) (mask & 0xff), (byte) ((mask & 0xff00) >> 8)};
         boolean[] keyUsage = new boolean[9];
@@ -88,22 +76,15 @@ public class Verifier {
         return keyUsage;
     }
 
-    /**
-     * Build a path using the given root as the trust anchor, and the passed
-     * in end constraints and certificate store.
-     * <p>
-     * Note: the path is built with revocation checking turned off.
-     */
-    private static CertPath buildPath(
-            X509Certificate rootCert,
-            X509CertSelector endConstraints,
-            CertStore certsAndCRLs)
+    private static CertPath buildPath(X509Certificate rootCert, X509CertSelector endConstraints, CertStore certsAndCRLs)
             throws Exception {
+
         CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
         PKIXBuilderParameters buildParams = new PKIXBuilderParameters(Collections.singleton(new TrustAnchor(rootCert,
                 null)), endConstraints);
 
         buildParams.addCertStore(certsAndCRLs);
+        // Note: the path is built with revocation checking turned off.
         buildParams.setRevocationEnabled(false);
 
         return builder.build(buildParams).getCertPath();

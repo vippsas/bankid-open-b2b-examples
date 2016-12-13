@@ -42,7 +42,8 @@ public class SenderVerifiesBankIDStatusIT {
         PrivateKey senderSignKey = (PrivateKey) senderKeystore.getKey(MerchantA.KEY_ALIAS, MerchantA.KEY_PASSWORD);
         BankIDStatusChecker senderBankIDStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
 
-        byte[] detachedSignature = Signer.signWithValidatedOCSPResponse(DTBS, senderCertPath, senderSignKey, senderBankIDStatusChecker);
+        byte[] detachedSignature =
+                Signer.signWithValidatedOCSPResponse(DTBS, senderCertPath, senderSignKey, senderBankIDStatusChecker);
 
 
         // When: Merchant A sends data and detached signature to Merchant B over the wire (not shown here).
@@ -56,10 +57,11 @@ public class SenderVerifiesBankIDStatusIT {
         PrivateKey receiverSignKey = (PrivateKey) receiverKeystore.getKey(MerchantB.KEY_ALIAS, MerchantB.KEY_PASSWORD);
 
         BankIDStatusChecker receiverBankIDStatusChecker = new BankIDStatusChecker(env, receiverSignKey, receiverCertList);
-        boolean dataVerified = Verifier.verifyDataAndDetachedCMS(env.getBankIDRootCert(), DTBS, detachedSignature, receiverBankIDStatusChecker);
+        boolean signatureVerified =
+                Verifier.verifyDetachedSignature(env.getBankIDRootCert(), DTBS, detachedSignature, receiverBankIDStatusChecker);
 
 
-        Assert.assertTrue(dataVerified);
+        Assert.assertTrue(signatureVerified);
     }
 
 }

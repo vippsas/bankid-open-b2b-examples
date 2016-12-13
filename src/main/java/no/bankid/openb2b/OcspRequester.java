@@ -36,7 +36,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.Algorithms.SHA256withRSA;
+import static no.bankid.openb2b.Algorithms.SHA512withRSA;
 import static no.bankid.openb2b.SecurityProvider.toCertificateHolders;
 
 public class OcspRequester {
@@ -83,7 +83,7 @@ public class OcspRequester {
                 X500Name requestorName = x509CertificateHolders.get(0).getSubject();
                 LOGGER.info("Using '{}' as requestor name", requestorName);
                 ocspReqBuilder.setRequestorName(requestorName); // Mandatory to set the requestorname
-                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder(SHA256withRSA.name()).build(signerKey),
+                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder(SHA512withRSA.name()).build(signerKey),
                         x509CertificateHolders.toArray(new X509CertificateHolder[signerChain.size()]));
             } else {
                 ocspReq = ocspReqBuilder.build();

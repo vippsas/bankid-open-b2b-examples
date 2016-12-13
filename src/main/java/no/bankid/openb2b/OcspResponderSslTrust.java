@@ -8,7 +8,7 @@ public class OcspResponderSslTrust {
     public static void init(BankIDEnvironment env) {
         Path trustStorePath = env.getOcspResponderSslTrustStorePath();
         if (!Files.exists(trustStorePath)) {
-            throw new RuntimeException("Failed to find OCSP responder SSL trust store");
+            throw new RuntimeException("Failed to find OCSP responder SSL trust store: " + trustStorePath);
         }
         System.setProperty("javax.net.ssl.trustStore", trustStorePath.toString());
         System.setProperty("javax.net.ssl.trustStorePassword", env.getOcspResponderSslTrustStorePassword());

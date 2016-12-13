@@ -9,7 +9,6 @@ import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
-import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
 import org.slf4j.Logger;
@@ -17,8 +16,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.*;
-import java.security.cert.*;
+import java.security.cert.CertPath;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
 import java.util.Base64;
 import java.util.Date;
 
@@ -58,7 +59,7 @@ public class Signer {
 
             SignedData signedData = new SignedData(  // TODO: vurder å bruke CMSSignedDataGenerator, da slipper vi å
                     // tenke på BER/DER etc.
-                    new DERSet(toASN1EncodableVector(SHA256.asId())),
+                    new DERSet(toASN1EncodableVector(SHA512.asId())),
                     detachedContentInfo,
                     new BERSet(certificatesVector),
                     null,
@@ -67,8 +68,7 @@ public class Signer {
             CMSSignedData cmsSignedData = new CMSSignedData(signedContent, new ContentInfo(PKCSObjectIdentifiers
                     .signedData, signedData));
             return Base64.getEncoder().encode(cmsSignedData.getEncoded());
-        } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException | IOException |
-                SignatureException | CMSException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -82,7 +82,6 @@ public class Signer {
 
             X509CertificateHolder signerCertificate = toCertificateHolder(messageSignerPath.getCertificates().get(0));
 
-
             CMSProcessableByteArray signedContent = new CMSProcessableByteArray(dataToBeSigned);
             SignerInfo signerInfo = createSignerInfo(signerCertificate, new DEROctetString(doDigest(dataToBeSigned)),
                     messageSignerKey);
@@ -95,12 +94,12 @@ public class Signer {
             }
 
             // Check revocation state for our own signing certificate and add the signed response to the CMS
-            byte[] ocspResponseBytes = bankIDStatusChecker.getOcspResponseFromVa(messageSignerPath);
+            byte[] ocspResponseBytes = bankIDStatusChecker.validateCertPathAndOcspResponseOnline(messageSignerPath);
 
             OCSPResponse ocspResponse = OCSPResponse.getInstance(ocspResponseBytes);
             SignedData signedData = new SignedData( // TODO: vurder å bruke CMSSignedDataGenerator, da slipper vi å
                     // tenke på BER/DER etc.
-                    new DERSet(toASN1EncodableVector(SHA256.asId())),
+                    new DERSet(toASN1EncodableVector(SHA512.asId())),
                     detachedContentInfo,
                     new BERSet(certificatesVector),
                     new BERSet(toASN1EncodableVector(new DERTaggedObject(false, 1, new OtherRevocationInfoFormat
@@ -111,8 +110,7 @@ public class Signer {
                     .signedData, signedData));
 
             return Base64.getEncoder().encode(cmsSignedData.getEncoded());
-        } catch (InvalidAlgorithmParameterException | CertificateException | InvalidKeyException |
-                NoSuchAlgorithmException | NoSuchProviderException | IOException | SignatureException | CMSException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
@@ -129,7 +127,7 @@ public class Signer {
                 new Attribute(CMSAttributes.messageDigest, new DERSet(dtbsDigest)),
                 new Attribute(CMSAttributes.signingTime, new DERSet(new Time(new Date()))),
                 new Attribute(PKCSObjectIdentifiers.id_aa_ets_otherSigCert,
-                        new DERSet(new OtherSigningCertificate(new OtherCertID(SHA256.asId(), doDigest
+                        new DERSet(new OtherSigningCertificate(new OtherCertID(SHA512.asId(), doDigest
                                 (signerCertificate.getEncoded()))))));
 
         DERSet authenticatedAttributes = new DERSet(authAttribVector);
@@ -138,7 +136,7 @@ public class Signer {
                 .getSerialNumber());
 
         return new SignerInfo(new SignerIdentifier(signerId),
-                SHA256.asId(),
+                SHA512.asId(),
                 authenticatedAttributes,
                 RSA.asId(),
                 new DEROctetString(signData(privateKey, authenticatedAttributes.getEncoded())),
@@ -147,7 +145,7 @@ public class Signer {
 
     private static byte[] signData(PrivateKey privateKey, byte[] toBeSigned) throws NoSuchAlgorithmException,
             InvalidKeyException, SignatureException, NoSuchProviderException {
-        Signature signature = Signature.getInstance(SHA256withRSA.name());
+        Signature signature = Signature.getInstance(SHA512withRSA.name());
         signature.initSign(privateKey);
         signature.update(toBeSigned);
         return signature.sign();
@@ -155,7 +153,7 @@ public class Signer {
 
     private static byte[] doDigest(byte[] tbs) {
         try {
-            MessageDigest md = MessageDigest.getInstance(SHA256.name());
+            MessageDigest md = MessageDigest.getInstance(SHA512.name());
             md.update(tbs);
             return md.digest();
         } catch (NoSuchAlgorithmException e) {

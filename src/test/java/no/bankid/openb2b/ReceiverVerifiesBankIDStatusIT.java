@@ -54,9 +54,10 @@ public class ReceiverVerifiesBankIDStatusIT {
         PrivateKey receiverSignKey = (PrivateKey) receiverKeystore.getKey(MerchantB.KEY_ALIAS, MerchantB.KEY_PASSWORD);
 
         BankIDStatusChecker bankIDStatusChecker = new BankIDStatusChecker(env, receiverSignKey, receiverCertList);
-        boolean dataVerified = Verifier.verifyDataAndDetachedCMS(env.getBankIDRootCert(), DTBS, detachedSignature, bankIDStatusChecker);
+        boolean signatureVerified =
+                Verifier.verifyDetachedSignature(env.getBankIDRootCert(), DTBS, detachedSignature, bankIDStatusChecker);
 
 
-        Assert.assertTrue(dataVerified);
+        Assert.assertTrue(signatureVerified);
     }
 }
