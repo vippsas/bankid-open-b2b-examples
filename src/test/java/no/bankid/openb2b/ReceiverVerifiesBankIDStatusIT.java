@@ -13,7 +13,7 @@ import java.security.cert.Certificate;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static no.bankid.openb2b.SomeUtils.CERTIFICATE_FACTORY;
+import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
 /**
  * Run with -Djava.security.debug="certpath ocsp" to debug.
@@ -31,6 +31,8 @@ public class ReceiverVerifiesBankIDStatusIT {
 
     @Test
     public void happyDayScenario() throws Exception {
+
+        OcspResponderSslTrust.init(env);
 
         // Given: Merchant A signs data and creates a detached signature, without OCSP check.
         KeyStore senderKeystore = KeyStore.getInstance("JKS");

@@ -31,12 +31,13 @@ import java.math.BigInteger;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.security.PrivateKey;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
 import static no.bankid.openb2b.Algorithms.SHA256withRSA;
-import static no.bankid.openb2b.SomeUtils.*;
+import static no.bankid.openb2b.SecurityProvider.toCertificateHolders;
 
 public class OcspRequester {
 
@@ -46,14 +47,18 @@ public class OcspRequester {
     /**
      * See RFC6960 for details.
      *
-     * @param certToBeValidated must contain the authorityInfoAccessExtension holding the url for the va service and the certificate serialnumber
+     * @param certToBeValidated must contain the authorityInfoAccessExtension holding the url for the va service and
+     *                          the certificate serialnumber
      * @param issuerCert        issuer of certToBeValidated, used together with certToBeValidated's serialnumber
      * @param signerChain       used for signing the ocsp request to the va service, used if nonempty
-     * @param signerKey         used together with the signerchain to sign the ocsp request, required if signerchain is nonempty
+     * @param signerKey         used together with the signerchain to sign the ocsp request, required if signerchain
+     *                          is nonempty
      * @return DEREncoded bytes
      */
-    public byte[] sendOcspRequestGetResponse(X509Certificate certToBeValidated, X509Certificate issuerCert,
-                                             List<? extends java.security.cert.Certificate> signerChain, PrivateKey signerKey) {
+    public byte[] sendOcspRequestGetResponse(X509Certificate certToBeValidated,
+                                             X509Certificate issuerCert,
+                                             List<? extends Certificate> signerChain,
+                                             PrivateKey signerKey) {
 
         URL ocspUrlFromCertificate = getOcspUrlFromCertificate(certToBeValidated);
         LOGGER.info("Connecting to VA: {}", ocspUrlFromCertificate);
@@ -74,7 +79,7 @@ public class OcspRequester {
 
             // Sign request if signerchain is given, all BankID VA's demands signed ocsp requests.
             if (signerChain != null && !signerChain.isEmpty()) {
-                List<X509CertificateHolder> x509CertificateHolders = toCertificateHolder(signerChain);
+                List<X509CertificateHolder> x509CertificateHolders = toCertificateHolders(signerChain);
                 X500Name requestorName = x509CertificateHolders.get(0).getSubject();
                 LOGGER.info("Using '{}' as requestor name", requestorName);
                 ocspReqBuilder.setRequestorName(requestorName); // Mandatory to set the requestorname
@@ -86,7 +91,8 @@ public class OcspRequester {
 
         } catch (OCSPException | CertificateEncodingException | OperatorCreationException e) {
             throw new IllegalArgumentException(e);
-        } // TODO: se http://www.programcreek.com/java-api-examples/index.php?api=org.bouncycastle.ocsp.OCSPResp for enklere kode, og husk å legge inn sjekk på nonceverdien sent over.
+        } // TODO: se http://www.programcreek.com/java-api-examples/index.php?api=org.bouncycastle.ocsp.OCSPResp for
+        // enklere kode, og husk å legge inn sjekk på nonceverdien sent over.
         byte ocspResponseBytes[] = sendRequest(ocspUrlFromCertificate, ocspReq);
 
         checkResult(ocspResponseBytes, nonce);
@@ -110,7 +116,8 @@ public class OcspRequester {
                 vaConnectionOutputStream.write(ocspReqBytes);
                 vaConnectionOutputStream.flush();
                 if (vaConnection.getResponseCode() != 200) {
-                    LOGGER.debug("OCSP Received HTTP error: " + vaConnection.getResponseCode() + " - " + vaConnection.getResponseMessage());
+                    LOGGER.debug("OCSP Received HTTP error: " + vaConnection.getResponseCode() + " - " + vaConnection
+                            .getResponseMessage());
                 }
                 try (InputStream vaConnectionInputStream = vaConnection.getInputStream()) {
                     int responseLength = vaConnection.getContentLength();
@@ -122,7 +129,8 @@ public class OcspRequester {
 
                     while (true) {
                         if (nReadSoFar < responseLength) {
-                            int nRead = vaConnectionInputStream.read(ocspResponseBytes, nReadSoFar, ocspResponseBytes.length - nReadSoFar);
+                            int nRead = vaConnectionInputStream.read(ocspResponseBytes, nReadSoFar, ocspResponseBytes
+                                    .length - nReadSoFar);
                             if (nRead >= 0) {
                                 nReadSoFar += nRead;
                                 if (nReadSoFar >= ocspResponseBytes.length && nReadSoFar < responseLength) {
@@ -133,7 +141,8 @@ public class OcspRequester {
                         }
 
                         ocspResponseBytes = Arrays.copyOf(ocspResponseBytes, nReadSoFar);
-                        LOGGER.debug("Received OcspResp:\n{}", new String(Base64.getMimeEncoder().encode(ocspResponseBytes)));
+                        LOGGER.debug("Received OcspResp:\n{}", new String(Base64.getMimeEncoder().encode
+                                (ocspResponseBytes)));
                         break;
                     }
 
@@ -153,18 +162,24 @@ public class OcspRequester {
                 throw new IllegalStateException("Invalid OCSP status " + ocspResp.getStatus());
             }
             BasicOCSPResp basicOCSPResp = (BasicOCSPResp) ocspResp.getResponseObject();
-            Optional<Extension> nonceExtension = Optional.ofNullable(basicOCSPResp.getExtension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce));
-            BigInteger foundNonce = nonceExtension.map(nonceReceived -> new BigInteger(nonceReceived.getExtnValue().getOctets())).orElse(null);
+            Optional<Extension> nonceExtension = Optional.ofNullable(basicOCSPResp.getExtension(OCSPObjectIdentifiers
+                    .id_pkix_ocsp_nonce));
+            BigInteger foundNonce = nonceExtension.map(nonceReceived -> new BigInteger(nonceReceived.getExtnValue()
+                    .getOctets())).orElse(null);
 
             if (!Objects.equals(foundNonce, expectedNonceValue)) {
-                throw new IllegalStateException("Invalid nonce value in OCSP response expected: " + expectedNonceValue + " received:" + foundNonce);
+                throw new IllegalStateException("Invalid nonce value in OCSP response expected: " + expectedNonceValue
+                        + " received:" + foundNonce);
             }
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("OCSP Responder's name is " + basicOCSPResp.getResponderId().toASN1Primitive().getName());
                 X509CertificateHolder[] certs = basicOCSPResp.getCerts();
-                boolean signatureValid = basicOCSPResp.isSignatureValid(new BcRSAContentVerifierProviderBuilder(new DefaultDigestAlgorithmIdentifierFinder()).build(certs[0]));
+                boolean signatureValid = basicOCSPResp.isSignatureValid(new BcRSAContentVerifierProviderBuilder(new
+                        DefaultDigestAlgorithmIdentifierFinder()).build(certs[0]));
                 LOGGER.debug("OCSP Responder's signature is valid: " + signatureValid);
-                LOGGER.debug("OCSP Responder's certificate used for signing OCSP response is:\n " + BEGIN_CERTIFICATE + new String(Base64.getMimeEncoder().encode(certs[0].getEncoded())) + "\n" + END_CERTIFICATE);
+                LOGGER.debug("OCSP Responder's certificate used for signing OCSP response is:\n " + "-----BEGIN " +
+                        "CERTIFICATE-----\n" + new String(Base64.getMimeEncoder().encode(certs[0].getEncoded())) +
+                        "\n" + "-----END CERTIFICATE-----\n");
 
                 SingleResp singleResp = basicOCSPResp.getResponses()[0];
 
@@ -186,7 +201,8 @@ public class OcspRequester {
         byte[] extensionValue = cert.getExtensionValue(Extension.authorityInfoAccess.getId());
 
         try {
-            ASN1Sequence asn1Seq = (ASN1Sequence) X509ExtensionUtil.fromExtensionValue(extensionValue); // AuthorityInfoAccessSyntax
+            ASN1Sequence asn1Seq = (ASN1Sequence) X509ExtensionUtil.fromExtensionValue(extensionValue); //
+            // AuthorityInfoAccessSyntax
             Enumeration<?> objects = asn1Seq.getObjects();
 
             while (objects.hasMoreElements()) {

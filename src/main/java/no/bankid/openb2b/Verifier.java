@@ -16,13 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.cert.*;
-import java.util.Base64;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
-import static no.bankid.openb2b.SomeUtils.buildPath;
-import static no.bankid.openb2b.SomeUtils.getKeyUsage;
+import java.util.*;
 
 public class Verifier {
 
@@ -32,9 +26,12 @@ public class Verifier {
     /**
      * Handles verification of a signed message.
      */
-    public static boolean verifyDataAndDetachedCMS(X509Certificate rootCert, byte dtbs[], byte[] base64EncodedCMS, BankIDStatusChecker bankIDStatusChecker) throws Exception {
+    public static boolean verifyDataAndDetachedCMS(X509Certificate rootCert,
+                                                   byte dtbs[],
+                                                   byte[] base64EncodedCMS,
+                                                   BankIDStatusChecker bankIDStatusChecker) throws Exception {
 
-        final byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
+        byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
 
         CMSSignedData signedData = new CMSSignedData(new CMSProcessableByteArray(dtbs), cmsBytesBlock);
 
@@ -53,7 +50,8 @@ public class Verifier {
             X509Certificate signerCertificate = (X509Certificate) certificates.get(0);
             LOGGER.info("Message was signed by '{}'", signerCertificate.getSubjectX500Principal().getName("RFC1779"));
 
-            Store<DERSequence> otherRevocationInfoStore = signedData.getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
+            Store<DERSequence> otherRevocationInfoStore = signedData.getOtherRevocationInfo(OCSPObjectIdentifiers
+                    .id_pkix_ocsp_response);
             Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
 
             if (allOtherRevocationInfos.isEmpty()) {
@@ -64,7 +62,7 @@ public class Verifier {
                 // Sender has inserted ocsp response
                 LOGGER.info("Checking embedded OCSP response ");
                 // TODO: We handle only the first, in case of more than one, these should be handled
-                byte [] ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
+                byte[] ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
                 bankIDStatusChecker.validateCertPathAndOcspResponseOffline(certPath, ocspResponse);
             }
 
@@ -73,4 +71,42 @@ public class Verifier {
 
         return false;
     }
+
+    /**
+     * Return a boolean array representing passed in keyUsage mask.
+     *
+     * @param mask keyUsage mask.
+     */
+    private static boolean[] getKeyUsage(int mask) {
+        byte[] bytes = new byte[]{(byte) (mask & 0xff), (byte) ((mask & 0xff00) >> 8)};
+        boolean[] keyUsage = new boolean[9];
+
+        for (int i = 0; i != 9; i++) {
+            keyUsage[i] = (bytes[i / 8] & (0x80 >>> (i % 8))) != 0;
+        }
+
+        return keyUsage;
+    }
+
+    /**
+     * Build a path using the given root as the trust anchor, and the passed
+     * in end constraints and certificate store.
+     * <p>
+     * Note: the path is built with revocation checking turned off.
+     */
+    private static CertPath buildPath(
+            X509Certificate rootCert,
+            X509CertSelector endConstraints,
+            CertStore certsAndCRLs)
+            throws Exception {
+        CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
+        PKIXBuilderParameters buildParams = new PKIXBuilderParameters(Collections.singleton(new TrustAnchor(rootCert,
+                null)), endConstraints);
+
+        buildParams.addCertStore(certsAndCRLs);
+        buildParams.setRevocationEnabled(false);
+
+        return builder.build(buildParams).getCertPath();
+    }
+
 }
