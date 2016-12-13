@@ -201,19 +201,18 @@ public class OcspRequester {
         byte[] extensionValue = cert.getExtensionValue(Extension.authorityInfoAccess.getId());
 
         try {
-            ASN1Sequence asn1Seq = (ASN1Sequence) X509ExtensionUtil.fromExtensionValue(extensionValue); //
-            // AuthorityInfoAccessSyntax
-            Enumeration<?> objects = asn1Seq.getObjects();
+            ASN1Sequence authorityInfoAccess = (ASN1Sequence) X509ExtensionUtil.fromExtensionValue(extensionValue);
+            Enumeration<?> objects = authorityInfoAccess.getObjects();
 
             while (objects.hasMoreElements()) {
-                ASN1Sequence obj = (ASN1Sequence) objects.nextElement(); // AccessDescription
-                ASN1ObjectIdentifier oid = (ASN1ObjectIdentifier) obj.getObjectAt(0); // accessMethod
-                DERTaggedObject location = (DERTaggedObject) obj.getObjectAt(1); // accessLocation
+                ASN1Sequence accessDescription = (ASN1Sequence) objects.nextElement();
+                ASN1ObjectIdentifier accessMethod = (ASN1ObjectIdentifier) accessDescription.getObjectAt(0);
+                DERTaggedObject accessLocation = (DERTaggedObject) accessDescription.getObjectAt(1);
 
-                if (location.getTagNo() == GeneralName.uniformResourceIdentifier) {
-                    DEROctetString uri = (DEROctetString) location.getObject();
+                if (accessLocation.getTagNo() == GeneralName.uniformResourceIdentifier) {
+                    DEROctetString uri = (DEROctetString) accessLocation.getObject();
                     String str = new String(uri.getOctets());
-                    if (oid.equals(X509ObjectIdentifiers.id_ad_ocsp)) {
+                    if (accessMethod.equals(X509ObjectIdentifiers.id_ad_ocsp)) {
                         return new URL(str);
                     }
                 }
