@@ -23,7 +23,7 @@ public class BankIDStatusChecker {
     public BankIDStatusChecker(BankIDEnvironment environment,
                                PrivateKey signerKey,
                                List<? extends Certificate> signerCertChain) {
-        this.trustAnchors = Collections.singleton(new TrustAnchor(environment.getBankIDRootCert(), null));
+        this.trustAnchors = Collections.singleton(environment.getBankIDRoot());
         this.ocspResponderCert = environment.getOcspResponderCert();
         this.revocationCheckerOptions = environment.getRevocationCheckerOptions();
         this.signerKey = signerKey;

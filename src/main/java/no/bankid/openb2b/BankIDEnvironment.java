@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.cert.PKIXRevocationChecker;
+import java.security.cert.TrustAnchor;
 import java.security.cert.X509Certificate;
 import java.util.EnumSet;
 import java.util.Set;
@@ -15,11 +16,12 @@ public enum BankIDEnvironment {
     PREPROD,
     PROD;
 
-    X509Certificate getBankIDRootCert() {
+    TrustAnchor getBankIDRoot() {
         try (InputStream certStream = name().equals(PREPROD.name()) ?
                 BankIDRootCertPreprod.getInputStream() :
                 BankIDRootCertProd.getInputStream()) {
-            return (X509Certificate) CERTIFICATE_FACTORY.generateCertificate(certStream);
+            X509Certificate rootCert = (X509Certificate) CERTIFICATE_FACTORY.generateCertificate(certStream);
+            return new TrustAnchor(rootCert, null);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to load BankID root certificate for " + name(), e);
         }

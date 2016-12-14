@@ -46,7 +46,7 @@ public class ReceiverVerifiesBankIDStatusIT {
         BankIDStatusChecker bankIDStatusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
         boolean signatureVerified =
-                Verifier.verifyDetachedSignature(env.getBankIDRootCert(), DTBS, detachedSignature, bankIDStatusChecker);
+                Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature, bankIDStatusChecker);
 
 
         Assert.assertTrue(signatureVerified);

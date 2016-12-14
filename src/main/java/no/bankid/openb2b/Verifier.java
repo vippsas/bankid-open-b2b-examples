@@ -22,7 +22,7 @@ public class Verifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Verifier.class);
 
-    public static boolean verifyDetachedSignature(X509Certificate rootCert,
+    public static boolean verifyDetachedSignature(TrustAnchor rootCert,
                                                   byte dtbs[],
                                                   byte[] base64EncodedCMS,
                                                   BankIDStatusChecker bankIDStatusChecker) throws Exception {
@@ -73,12 +73,11 @@ public class Verifier {
         return keyUsage;
     }
 
-    private static CertPath buildPath(X509Certificate rootCert, X509CertSelector endConstraints, CertStore certsAndCRLs)
+    private static CertPath buildPath(TrustAnchor rootCert, X509CertSelector endConstraints, CertStore certsAndCRLs)
             throws Exception {
 
         CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
-        PKIXBuilderParameters buildParams =
-                new PKIXBuilderParameters(Collections.singleton(new TrustAnchor(rootCert, null)), endConstraints);
+        PKIXBuilderParameters buildParams = new PKIXBuilderParameters(Collections.singleton(rootCert), endConstraints);
 
         buildParams.addCertStore(certsAndCRLs);
         // Note: the path is built with revocation checking turned off.
