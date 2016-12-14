@@ -23,7 +23,7 @@ public enum BankIDEnvironment {
                 BankIDRootCertPreprod.getInputStream() :
                 BankIDRootCertProd.getInputStream()) {
             return (X509Certificate) CERTIFICATE_FACTORY.generateCertificate(certStream);
-        } catch (IOException | CertificateException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("Failed to load BankID root certificate for " + name(), e);
         }
     }
@@ -33,19 +33,18 @@ public enum BankIDEnvironment {
                 OcspResponderCertPreprod.getInputStream() :
                 OcspResponderCertProd.getInputStream()) {
             return (X509Certificate) CERTIFICATE_FACTORY.generateCertificate(certStream);
-        } catch (CertificateException | IOException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("Failed to load VA OCSP responder certificate for " + name());
         }
     }
 
     public Path getOcspResponderSslTrustStorePath() {
-        // TODO: Lag preprod jks på nytt, med innhold fra brukerstedspakken.
         // TODO: PROD
         String keystore = name().equals(PREPROD.name()) ? "/trust-va-preprod1.no.jks" : null;
         try {
             return Paths.get(getClass().getResource(keystore).toURI());
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("Failed to load VA OCSP responder SSL certificate for " + name());
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to load VA OCSP responder SSL certificate for " + name(), e);
         }
     }
 
