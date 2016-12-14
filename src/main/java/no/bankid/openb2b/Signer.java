@@ -20,6 +20,8 @@ import java.security.cert.CertPath;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
 
+import static no.bankid.openb2b.Algorithms.SHA512withRSA;
+
 /**
  * See rfc5652 (https://tools.ietf.org/html/rfc5652) for details about cms content.
  */
@@ -28,7 +30,7 @@ public class Signer {
     private static final Logger LOGGER = LoggerFactory.getLogger(Signer.class);
 
     private static final JcaContentSignerBuilder SHA_512_WITH_RSA_SIGNER_BUILDER =
-            new JcaContentSignerBuilder("SHA512withRSA");
+            new JcaContentSignerBuilder(SHA512withRSA.name());
 
 
     public static byte[] sign(byte[] dataToBeSigned,
