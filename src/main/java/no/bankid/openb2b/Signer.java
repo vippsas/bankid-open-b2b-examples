@@ -43,10 +43,11 @@ public class Signer {
                     null,
                     new DERSet(toASN1EncodableVector(signature.getSignerInfo())));
 
-            CMSSignedData cmsSignedData = new CMSSignedData(signature.getSignedContent(), new ContentInfo
-                    (PKCSObjectIdentifiers
-                            .signedData, signedData));
+            ContentInfo contentInfo = new ContentInfo(PKCSObjectIdentifiers.signedData, signedData);
+            CMSSignedData cmsSignedData = new CMSSignedData(signature.getSignedContent(), contentInfo);
+
             return Base64.getEncoder().encode(cmsSignedData.getEncoded());
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -61,10 +62,11 @@ public class Signer {
 
             Signature signature = new Signature(dataToBeSigned, signerCertPath, signerKey);
 
+            // TODO: Consider extracting these two lines outside of this class and providing an optional OCSPResponse instead.
             // Check revocation state for our own signing certificate and add the signed response to the CMS
             byte[] ocspResponseBytes = bankIDStatusChecker.validateCertPathAndOcspResponseOnline(signerCertPath);
-
             OCSPResponse ocspResponse = OCSPResponse.getInstance(ocspResponseBytes);
+
             SignedData signedData = new SignedData( // TODO: vurder å bruke CMSSignedDataGenerator, da slipper vi å
                     // tenke på BER/DER etc.
                     new DERSet(toASN1EncodableVector(SHA512.asId())),
@@ -74,11 +76,11 @@ public class Signer {
                             (OCSPObjectIdentifiers.id_pkix_ocsp_response, ocspResponse)))),
                     new DERSet(toASN1EncodableVector(signature.getSignerInfo())));
 
-            CMSSignedData cmsSignedData = new CMSSignedData(signature.getSignedContent(), new ContentInfo
-                    (PKCSObjectIdentifiers
-                            .signedData, signedData));
+            ContentInfo contentInfo = new ContentInfo(PKCSObjectIdentifiers.signedData, signedData);
+            CMSSignedData cmsSignedData = new CMSSignedData(signature.getSignedContent(), contentInfo);
 
             return Base64.getEncoder().encode(cmsSignedData.getEncoded());
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
