@@ -3,7 +3,6 @@ package no.bankid.openb2b;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.ocsp.OCSPResponse;
-import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.cert.jcajce.JcaCertStoreBuilder;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
@@ -22,6 +21,9 @@ public class Verifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Verifier.class);
 
+    private static final boolean[] KEY_USAGE_NON_REPUDIATION =
+            {false, true, false, false, false, false, false, false, false};
+
     public static boolean verifyDetachedSignature(TrustAnchor rootCert,
                                                   byte dtbs[],
                                                   byte[] base64EncodedCMS,
@@ -37,7 +39,7 @@ public class Verifier {
             SignerInformation signer = (SignerInformation) it.next();
             X509CertSelector signerConstraints = new JcaX509CertSelectorConverter().getCertSelector(signer.getSID());
             // BankID sign certs has 'non_repudiation', not 'digitalSignature'.
-            signerConstraints.setKeyUsage(getKeyUsage(KeyUsage.nonRepudiation));
+            signerConstraints.setKeyUsage(KEY_USAGE_NON_REPUDIATION);
             CertPath certPath = buildPath(rootCert, signerConstraints, certsAndCRLs);
             List<? extends Certificate> certificates = certPath.getCertificates();
             X509Certificate signerCertificate = (X509Certificate) certificates.get(0);
@@ -60,17 +62,6 @@ public class Verifier {
         }
 
         return false;
-    }
-
-    private static boolean[] getKeyUsage(int mask) {
-        byte[] bytes = new byte[]{(byte) (mask & 0xff), (byte) ((mask & 0xff00) >> 8)};
-        boolean[] keyUsage = new boolean[9];
-
-        for (int i = 0; i != 9; i++) {
-            keyUsage[i] = (bytes[i / 8] & (0x80 >>> (i % 8))) != 0;
-        }
-
-        return keyUsage;
     }
 
     private static CertPath buildPath(TrustAnchor rootCert, X509CertSelector endConstraints, CertStore certsAndCRLs)
