@@ -1,5 +1,6 @@
 package no.bankid.openb2b;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 import java.nio.file.Path;
@@ -18,27 +19,27 @@ public enum BankIDEnvironment {
     PROD;
 
     X509Certificate getBankIDRootCert() {
-        // TODO: PROD
-        InputStream certStream = name().equals(PREPROD.name()) ? BankIDRootCertPreprod.getInputStream() : null;
-        try {
+        try (InputStream certStream = name().equals(PREPROD.name()) ?
+                BankIDRootCertPreprod.getInputStream() :
+                BankIDRootCertProd.getInputStream()) {
             return (X509Certificate) CERTIFICATE_FACTORY.generateCertificate(certStream);
-        } catch (CertificateException e) {
-            throw new IllegalStateException("Failed to load BankID root certificate for " + name());
+        } catch (IOException | CertificateException e) {
+            throw new IllegalStateException("Failed to load BankID root certificate for " + name(), e);
         }
     }
 
     X509Certificate getOcspResponderCert() {
-        // TODO: Lag preprod jks på nytt, med innhold fra brukerstedspakken.
-        // TODO: PROD
-        InputStream certStream = name().equals(PREPROD.name()) ? OcspResponderCertPreprod.getInputStream() : null;
-        try {
+        try (InputStream certStream = name().equals(PREPROD.name()) ?
+                OcspResponderCertPreprod.getInputStream() :
+                OcspResponderCertProd.getInputStream()) {
             return (X509Certificate) CERTIFICATE_FACTORY.generateCertificate(certStream);
-        } catch (CertificateException e) {
+        } catch (CertificateException | IOException e) {
             throw new IllegalStateException("Failed to load VA OCSP responder certificate for " + name());
         }
     }
 
     public Path getOcspResponderSslTrustStorePath() {
+        // TODO: Lag preprod jks på nytt, med innhold fra brukerstedspakken.
         // TODO: PROD
         String keystore = name().equals(PREPROD.name()) ? "/trust-va-preprod1.no.jks" : null;
         try {
@@ -49,8 +50,7 @@ public enum BankIDEnvironment {
     }
 
     public String getOcspResponderSslTrustStorePassword() {
-        // TODO: PROD
-        return name().equals(PREPROD.name()) ? "changeit" : null;
+        return name().equals(PREPROD.name()) ? "changeit" : "changeit";
     }
 
     public Set<PKIXRevocationChecker.Option> getRevocationCheckerOptions() {
