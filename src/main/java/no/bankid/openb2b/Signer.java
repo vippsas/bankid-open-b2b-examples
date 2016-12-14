@@ -31,51 +31,28 @@ public class Signer {
             new JcaContentSignerBuilder("SHA512withRSA");
 
 
-    public static byte[] signWithoutOCSPResponse(byte[] dataToBeSigned,
-                                                 CertPath signerCertPath,
-                                                 PrivateKey signerKey) {
+    public static byte[] sign(byte[] dataToBeSigned,
+                              CertPath signerCertPath,
+                              PrivateKey signerKey,
+                              OCSPResponse ocspResponse) {
         try {
-            LOGGER.info("Signs a message, NO OCSP Response in the result");
+            LOGGER.info("Signs a message");
 
             ContentSigner sha512Signer = SHA_512_WITH_RSA_SIGNER_BUILDER.build(signerKey);
             JcaX509CertificateHolder signerCert =
                     new JcaX509CertificateHolder((X509Certificate) signerCertPath.getCertificates().get(0));
-            CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
             DigestCalculatorProvider digestProvider = new JcaDigestCalculatorProviderBuilder().build();
             JcaSignerInfoGeneratorBuilder infoGeneratorBuilder = new JcaSignerInfoGeneratorBuilder(digestProvider);
-            generator.addSignerInfoGenerator(infoGeneratorBuilder.build(sha512Signer, signerCert));
-            generator.addCertificates(new JcaCertStore(signerCertPath.getCertificates()));
-            CMSSignedData cmsSignedData = generator.generate(new CMSProcessableByteArray(dataToBeSigned), false);
 
-            return Base64.getEncoder().encode(cmsSignedData.getEncoded());
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static byte[] signWithValidatedOCSPResponse(byte[] dataToBeSigned,
-                                                       CertPath signerCertPath,
-                                                       PrivateKey signerKey,
-                                                       BankIDStatusChecker bankIDStatusChecker) {
-        try {
-            LOGGER.info("Signs a message, EMBEDS an OCSP Response in the result");
-
-            // TODO: Consider extracting these two lines outside of this class and providing an optional OCSPResponse
-            // instead.
-            // Check revocation state for our own signing certificate and add the signed response to the CMS
-            byte[] ocspResponseBytes = bankIDStatusChecker.validateCertPathAndOcspResponseOnline(signerCertPath);
-            OCSPResponse ocspResponse = OCSPResponse.getInstance(ocspResponseBytes);
-
-            ContentSigner sha512Signer = SHA_512_WITH_RSA_SIGNER_BUILDER.build(signerKey);
-            JcaX509CertificateHolder signerCert =
-                    new JcaX509CertificateHolder((X509Certificate) signerCertPath.getCertificates().get(0));
             CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
-            DigestCalculatorProvider digestProvider = new JcaDigestCalculatorProviderBuilder().build();
-            JcaSignerInfoGeneratorBuilder infoGeneratorBuilder = new JcaSignerInfoGeneratorBuilder(digestProvider);
             generator.addSignerInfoGenerator(infoGeneratorBuilder.build(sha512Signer, signerCert));
             generator.addCertificates(new JcaCertStore(signerCertPath.getCertificates()));
-            generator.addOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response, ocspResponse);
+            if (ocspResponse == null) {
+                LOGGER.info("NO OCSP Response in the result");
+            } else {
+                LOGGER.info("EMBEDS an OCSP Response in the result");
+                generator.addOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response, ocspResponse);
+            }
             CMSSignedData cmsSignedData = generator.generate(new CMSProcessableByteArray(dataToBeSigned), false);
 
             return Base64.getEncoder().encode(cmsSignedData.getEncoded());

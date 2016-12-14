@@ -77,8 +77,8 @@ public class Verifier {
             throws Exception {
 
         CertPathBuilder builder = CertPathBuilder.getInstance("PKIX");
-        PKIXBuilderParameters buildParams = new PKIXBuilderParameters(Collections.singleton(new TrustAnchor(rootCert,
-                null)), endConstraints);
+        PKIXBuilderParameters buildParams =
+                new PKIXBuilderParameters(Collections.singleton(new TrustAnchor(rootCert, null)), endConstraints);
 
         buildParams.addCertStore(certsAndCRLs);
         // Note: the path is built with revocation checking turned off.

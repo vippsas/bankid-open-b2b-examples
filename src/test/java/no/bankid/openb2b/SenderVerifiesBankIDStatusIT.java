@@ -1,5 +1,6 @@
 package no.bankid.openb2b;
 
+import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.junit.Assert;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -39,8 +40,9 @@ public class SenderVerifiesBankIDStatusIT {
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(senderCertList);
         PrivateKey senderSignKey = merchantA.getPrivateKey();
         BankIDStatusChecker senderBankIDStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
-        byte[] detachedSignature =
-                Signer.signWithValidatedOCSPResponse(DTBS, senderCertPath, senderSignKey, senderBankIDStatusChecker);
+        byte[] ocspResponseBytes = senderBankIDStatusChecker.validateCertPathAndOcspResponseOnline(senderCertPath);
+        OCSPResponse ocspResponse = OCSPResponse.getInstance(ocspResponseBytes);
+        byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, senderSignKey, ocspResponse);
 
 
         // When: Merchant A sends data and detached signature to Merchant B over the wire (not shown here).
