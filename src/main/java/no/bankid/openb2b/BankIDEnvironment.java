@@ -1,11 +1,8 @@
 package no.bankid.openb2b;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.cert.CertificateException;
 import java.security.cert.PKIXRevocationChecker;
 import java.security.cert.X509Certificate;
 import java.util.EnumSet;
@@ -39,8 +36,7 @@ public enum BankIDEnvironment {
     }
 
     public Path getOcspResponderSslTrustStorePath() {
-        // TODO: PROD
-        String keystore = name().equals(PREPROD.name()) ? "/trust-va-preprod1.no.jks" : null;
+        String keystore = name().equals(PREPROD.name()) ? "/trust-va-preprod.no.jks" : "/trust-va-prod.no.jks";
         try {
             return Paths.get(getClass().getResource(keystore).toURI());
         } catch (Exception e) {
