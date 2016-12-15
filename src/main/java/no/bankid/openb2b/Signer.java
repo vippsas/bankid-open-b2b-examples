@@ -25,16 +25,16 @@ import static no.bankid.openb2b.SecurityProvider.toCertificateHolder;
 /**
  * See rfc5652 (https://tools.ietf.org/html/rfc5652) for details about cms content.
  */
-public class Signer {
+class Signer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Signer.class);
 
 
-    public static byte[] sign(byte[] dataToBeSigned,
-                              CertPath signerCertPath,
-                              PrivateKey signerKey,
-                              @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<OCSPResponse>
-                                      ocspResponse) {
+    static byte[] sign(byte[] dataToBeSigned,
+                       CertPath signerCertPath,
+                       PrivateKey signerKey,
+                       @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<OCSPResponse>
+                               ocspResponse) {
         try {
             LOGGER.info("Signs a message");
 

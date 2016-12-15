@@ -3,7 +3,7 @@ package no.bankid.openb2b;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
-public class OcspResponderCertProd {
+class OcspResponderCertProd {
 
     // TODO: Add certificate
     private static final String OCSP_RESPONDER_CERTIFICATE_PROD =

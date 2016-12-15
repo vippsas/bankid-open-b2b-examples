@@ -9,13 +9,13 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 
-public abstract class Merchant {
+abstract class Merchant {
 
     List<Certificate> getCertList() throws Exception {
         return asList(getKeyStore().getCertificateChain(getKeyAlias()));
     }
 
-    public PrivateKey getPrivateKey() throws Exception {
+    PrivateKey getPrivateKey() throws Exception {
         return (PrivateKey) getKeyStore().getKey(getKeyAlias(), getKeyPassword());
     }
 

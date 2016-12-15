@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory;
 import java.security.cert.*;
 import java.util.*;
 
-public class Verifier {
+class Verifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Verifier.class);
 
@@ -27,10 +27,10 @@ public class Verifier {
     private static final boolean[] KEY_USAGE_NON_REPUDIATION =
             {false, true, false, false, false, false, false, false, false};
 
-    public static boolean verifyDetachedSignature(TrustAnchor rootCert,
-                                                  byte dtbs[],
-                                                  byte[] base64EncodedCMS,
-                                                  BankIDStatusChecker bankIDStatusChecker) throws Exception {
+    static boolean verifyDetachedSignature(TrustAnchor rootCert,
+                                           byte dtbs[],
+                                           byte[] base64EncodedCMS,
+                                           BankIDStatusChecker bankIDStatusChecker) throws Exception {
 
         byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
         CMSSignedData signedData = new CMSSignedData(new CMSProcessableByteArray(dtbs), cmsBytesBlock);

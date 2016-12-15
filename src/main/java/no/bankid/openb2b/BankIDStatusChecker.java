@@ -8,7 +8,7 @@ import java.security.cert.*;
 import java.util.*;
 
 
-public class BankIDStatusChecker {
+class BankIDStatusChecker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BankIDStatusChecker.class);
 
@@ -20,9 +20,9 @@ public class BankIDStatusChecker {
     private final OcspRequester ocspRequester;
 
 
-    public BankIDStatusChecker(BankIDEnvironment environment,
-                               PrivateKey signerKey,
-                               List<? extends Certificate> signerCertChain) {
+    BankIDStatusChecker(BankIDEnvironment environment,
+                        PrivateKey signerKey,
+                        List<? extends Certificate> signerCertChain) {
         this.trustAnchors = Collections.singleton(environment.getBankIDRoot());
         this.ocspResponderCert = environment.getOcspResponderCert();
         this.revocationCheckerOptions = environment.getRevocationCheckerOptions();
@@ -31,7 +31,7 @@ public class BankIDStatusChecker {
         ocspRequester = new OcspRequester();
     }
 
-    public byte[] validateCertPathAndOcspResponseOnline(CertPath targetPath) throws Exception {
+    byte[] validateCertPathAndOcspResponseOnline(CertPath targetPath) throws Exception {
 
         X509Certificate targetCertIssuer = (X509Certificate) targetPath.getCertificates().get(1);
         X509Certificate targetCert = (X509Certificate) targetPath.getCertificates().get(0);
@@ -45,7 +45,7 @@ public class BankIDStatusChecker {
         return ocspResponse;
     }
 
-    public void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse) throws Exception {
+    void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse) throws Exception {
 
         Map<X509Certificate, byte[]> ocspResponses = new HashMap<>();
         X509Certificate signerCertificate = (X509Certificate) signerPath.getCertificates().get(0);

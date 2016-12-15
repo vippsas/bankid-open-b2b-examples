@@ -41,17 +41,17 @@ import static org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers.id_pkix_ocsp_nonc
 /**
  * See RFC6960 for details.
  */
-public class OcspRequester {
+class OcspRequester {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OcspRequester.class);
 
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final String CONTENT_TYPE = "application/ocsp-request";
 
-    public byte[] post(X509Certificate certToBeValidated,
-                       X509Certificate issuerCert,
-                       List<? extends Certificate> signerChain,
-                       PrivateKey signerKey) {
+    byte[] post(X509Certificate certToBeValidated,
+                X509Certificate issuerCert,
+                List<? extends Certificate> signerChain,
+                PrivateKey signerKey) {
 
         if (signerChain == null || signerChain.isEmpty()) {
             throw new IllegalArgumentException("Parameter signerChain is required to sign OCSP request");

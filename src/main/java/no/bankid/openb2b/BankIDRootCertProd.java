@@ -3,7 +3,7 @@ package no.bankid.openb2b;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 
-public class BankIDRootCertProd {
+class BankIDRootCertProd {
 
     private static final String BANKID_ROOT_CERTIFICATE_PROD =
             "-----BEGIN CERTIFICATE-----\n"

@@ -37,7 +37,7 @@ public enum BankIDEnvironment {
         }
     }
 
-    public Path getOcspResponderSslTrustStorePath() {
+    Path getOcspResponderSslTrustStorePath() {
         String keystore = name().equals(PREPROD.name()) ? "/trust-va-preprod.no.jks" : "/trust-va-prod.no.jks";
         try {
             return Paths.get(getClass().getResource(keystore).toURI());
@@ -46,11 +46,11 @@ public enum BankIDEnvironment {
         }
     }
 
-    public String getOcspResponderSslTrustStorePassword() {
+    String getOcspResponderSslTrustStorePassword() {
         return name().equals(PREPROD.name()) ? "changeit" : "changeit";
     }
 
-    public Set<PKIXRevocationChecker.Option> getRevocationCheckerOptions() {
+    Set<PKIXRevocationChecker.Option> getRevocationCheckerOptions() {
         return name().equals(PREPROD.name()) ?
                 EnumSet.of(PKIXRevocationChecker.Option.ONLY_END_ENTITY) :
                 EnumSet.of(PKIXRevocationChecker.Option.NO_FALLBACK);

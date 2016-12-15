@@ -40,8 +40,8 @@ public class SenderVerifiesBankIDStatusIT {
         List<Certificate> senderCertList = merchantA.getCertList();
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(senderCertList);
         PrivateKey senderSignKey = merchantA.getPrivateKey();
-        BankIDStatusChecker senderBankIDStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
-        byte[] ocspResponseBytes = senderBankIDStatusChecker.validateCertPathAndOcspResponseOnline(senderCertPath);
+        BankIDStatusChecker senderStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
+        byte[] ocspResponseBytes = senderStatusChecker.validateCertPathAndOcspResponseOnline(senderCertPath);
         Optional<OCSPResponse> ocspResponse = Optional.of(OCSPResponse.getInstance(ocspResponseBytes));
         byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, senderSignKey, ocspResponse);
 
@@ -51,10 +51,10 @@ public class SenderVerifiesBankIDStatusIT {
 
 
         // Then: Merchant B verifies received data with detached signature.
-        BankIDStatusChecker receiverBankIDStatusChecker =
+        BankIDStatusChecker receiverStatusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
         boolean signatureVerified =
-                Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature, receiverBankIDStatusChecker);
+                Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature, receiverStatusChecker);
 
 
         Assert.assertTrue(signatureVerified);

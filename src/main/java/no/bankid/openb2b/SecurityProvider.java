@@ -13,7 +13,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SecurityProvider {
+class SecurityProvider {
 
     static final CertificateFactory CERTIFICATE_FACTORY;
 
