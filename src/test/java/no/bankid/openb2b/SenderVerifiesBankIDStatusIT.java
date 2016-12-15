@@ -11,6 +11,7 @@ import java.security.PrivateKey;
 import java.security.cert.CertPath;
 import java.security.cert.Certificate;
 import java.util.List;
+import java.util.Optional;
 
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
@@ -41,7 +42,7 @@ public class SenderVerifiesBankIDStatusIT {
         PrivateKey senderSignKey = merchantA.getPrivateKey();
         BankIDStatusChecker senderBankIDStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
         byte[] ocspResponseBytes = senderBankIDStatusChecker.validateCertPathAndOcspResponseOnline(senderCertPath);
-        OCSPResponse ocspResponse = OCSPResponse.getInstance(ocspResponseBytes);
+        Optional<OCSPResponse> ocspResponse = Optional.of(OCSPResponse.getInstance(ocspResponseBytes));
         byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, senderSignKey, ocspResponse);
 
 
