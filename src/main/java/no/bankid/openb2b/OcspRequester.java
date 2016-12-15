@@ -148,6 +148,7 @@ class OcspRequester {
         }
     }
 
+    // TODO: Delete if not necessary/relevant?
     private BasicOCSPResp checkNonce(OCSPResp ocspResponse, BigInteger expectedNonceValue) {
 
         try {
