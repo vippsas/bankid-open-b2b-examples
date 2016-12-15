@@ -21,6 +21,9 @@ public class Verifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Verifier.class);
 
+    /**
+     * see {@link X509Certificate#getKeyUsage() X509Certificate.getKeyUsage()}.
+     */
     private static final boolean[] KEY_USAGE_NON_REPUDIATION =
             {false, true, false, false, false, false, false, false, false};
 
