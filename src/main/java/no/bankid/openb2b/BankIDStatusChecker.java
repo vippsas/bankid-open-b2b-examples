@@ -38,8 +38,7 @@ public class BankIDStatusChecker {
         LOGGER.info("Sending OCSP request for certificate {}",
                 targetCert.getSubjectX500Principal().getName("RFC1779"));
 
-        byte[] ocspResponse =
-                ocspRequester.sendOcspRequestGetResponse(targetCert, targetCertIssuer, signerCertChain, signerKey);
+        byte[] ocspResponse = ocspRequester.post(targetCert, targetCertIssuer, signerCertChain, signerKey);
 
         validateCertPathAndOcspResponseOffline(targetPath, ocspResponse);
 

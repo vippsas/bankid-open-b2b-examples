@@ -50,10 +50,10 @@ public class OcspRequester {
     private static final int CONNECT_TIMEOUT_MS = 15000;
     private static final String CONTENT_TYPE = "application/ocsp-request";
 
-    public byte[] sendOcspRequestGetResponse(X509Certificate certToBeValidated,
-                                             X509Certificate issuerCert,
-                                             List<? extends Certificate> signerChain,
-                                             PrivateKey signerKey) {
+    public byte[] post(X509Certificate certToBeValidated,
+                       X509Certificate issuerCert,
+                       List<? extends Certificate> signerChain,
+                       PrivateKey signerKey) {
 
         URL ocspUrlFromCertificate = getOcspUrlFromCertificate(certToBeValidated);
         LOGGER.info("Connecting to VA: {}", ocspUrlFromCertificate);
