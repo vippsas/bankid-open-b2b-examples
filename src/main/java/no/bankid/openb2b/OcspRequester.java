@@ -5,7 +5,6 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERTaggedObject;
-import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
 import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.Extension;
@@ -15,8 +14,7 @@ import org.bouncycastle.asn1.x509.X509ObjectIdentifiers;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cert.ocsp.*;
-import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
-import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.operator.*;
 import org.bouncycastle.operator.bc.BcRSAContentVerifierProviderBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.bouncycastle.x509.extension.X509ExtensionUtil;
@@ -38,6 +36,7 @@ import java.util.*;
 
 import static no.bankid.openb2b.SecurityProvider.SHA_512_WITH_RSA_SIGNER_BUILDER;
 import static no.bankid.openb2b.SecurityProvider.toCertificateHolders;
+import static org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers.id_pkix_ocsp_nonce;
 
 /**
  * See RFC6960 for details.
@@ -54,43 +53,54 @@ public class OcspRequester {
                        List<? extends Certificate> signerChain,
                        PrivateKey signerKey) {
 
-        URL ocspUrlFromCertificate = getOcspUrlFromCertificate(certToBeValidated);
-        LOGGER.info("Connecting to VA: {}", ocspUrlFromCertificate);
+        if (signerChain == null || signerChain.isEmpty()) {
+            throw new IllegalArgumentException("Parameter signerChain is required to sign OCSP request");
+        }
 
         OCSPReq ocspReq;
         BigInteger nonce = BigInteger.valueOf(System.currentTimeMillis());
         try {
-            CertificateID id =
-                    new CertificateID(new JcaDigestCalculatorProviderBuilder().build().get(CertificateID.HASH_SHA1),
-                            new JcaX509CertificateHolder(issuerCert), certToBeValidated.getSerialNumber());
 
             OCSPReqBuilder ocspReqBuilder = new OCSPReqBuilder();
-            ocspReqBuilder.addRequest(id); // a certificate is identified using it's issuer and it's serialnumber.
 
-            // Place a nonce in the request, to prevent attack
-            Extension ocspNonce = new Extension(OCSPObjectIdentifiers.id_pkix_ocsp_nonce, false, nonce.toByteArray());
+            // A certificate is identified using it's issuer and it's serialnumber.
+            DigestCalculator digestCalc = new JcaDigestCalculatorProviderBuilder().build().get(CertificateID.HASH_SHA1);
+            JcaX509CertificateHolder issuerCertHolder = new JcaX509CertificateHolder(issuerCert);
+            BigInteger serialNumber = certToBeValidated.getSerialNumber();
+            CertificateID id = new CertificateID(digestCalc, issuerCertHolder, serialNumber);
+            ocspReqBuilder.addRequest(id);
+
+            // Place a nonce in the request, to prevent replay attack
+            Extension ocspNonce = new Extension(id_pkix_ocsp_nonce, false, nonce.toByteArray());
             ocspReqBuilder.setRequestExtensions(new Extensions(ocspNonce));
 
-            // Sign request if signerchain is given, all BankID VA's demands signed ocsp requests.
-            if (signerChain != null && !signerChain.isEmpty()) {
-                List<X509CertificateHolder> x509CertificateHolders = toCertificateHolders(signerChain);
-                X500Name requestorName = x509CertificateHolders.get(0).getSubject();
-                LOGGER.info("Using '{}' as requestor name", requestorName);
-                // Mandatory to set the requestorname
-                ocspReqBuilder.setRequestorName(requestorName);
-                ocspReq = ocspReqBuilder.build(SHA_512_WITH_RSA_SIGNER_BUILDER.build(signerKey),
-                        x509CertificateHolders.toArray(new X509CertificateHolder[signerChain.size()]));
-            } else {
-                ocspReq = ocspReqBuilder.build();
-            }
+            // Mandatory to set the requestorname
+            List<X509CertificateHolder> certificateHolders = toCertificateHolders(signerChain);
+            X500Name requestorName = certificateHolders.get(0).getSubject();
+            LOGGER.info("Using '{}' as requestor name", requestorName);
+            ocspReqBuilder.setRequestorName(requestorName);
+
+            // Sign request, all BankID VA's demands signed ocsp requests.
+            ContentSigner signer = SHA_512_WITH_RSA_SIGNER_BUILDER.build(signerKey);
+            X509CertificateHolder[] chain = certificateHolders.toArray(new X509CertificateHolder[signerChain.size()]);
+
+            ocspReq = ocspReqBuilder.build(signer, chain);
 
         } catch (OCSPException | CertificateEncodingException | OperatorCreationException e) {
             throw new IllegalArgumentException(e);
         }
 
+        URL ocspUrlFromCertificate = getOcspUrlFromCertificate(certToBeValidated);
+        LOGGER.info("Connecting to VA: {}", ocspUrlFromCertificate);
         byte ocspResponseBytes[] = sendRequest(ocspUrlFromCertificate, ocspReq);
 
-        checkResult(ocspResponseBytes, nonce);
+        OCSPResp ocspResp = new OCSPResp(OCSPResponse.getInstance(ocspResponseBytes));
+        if (ocspResp.getStatus() != 0) {
+            throw new IllegalStateException("Invalid OCSP status " + ocspResp.getStatus());
+        }
+
+        BasicOCSPResp basicOCSPResp = checkNonce(ocspResp, nonce);
+        debugLog(basicOCSPResp);
 
         return ocspResponseBytes;
     }
@@ -138,32 +148,43 @@ public class OcspRequester {
         }
     }
 
-    private void checkResult(byte[] ocspResponseBytes, BigInteger expectedNonceValue) {
+    private BasicOCSPResp checkNonce(OCSPResp ocspResponse, BigInteger expectedNonceValue) {
+
         try {
 
-            OCSPResp ocspResp = new OCSPResp(OCSPResponse.getInstance(ocspResponseBytes));
-            if (ocspResp.getStatus() != 0) {
-                throw new IllegalStateException("Invalid OCSP status " + ocspResp.getStatus());
-            }
-            BasicOCSPResp basicOCSPResp = (BasicOCSPResp) ocspResp.getResponseObject();
-            Optional<Extension> nonceExtension = Optional.ofNullable(basicOCSPResp.getExtension(OCSPObjectIdentifiers
-                    .id_pkix_ocsp_nonce));
-            BigInteger foundNonce = nonceExtension.map(nonceReceived -> new BigInteger(nonceReceived.getExtnValue()
-                    .getOctets())).orElse(null);
+            BasicOCSPResp basicOCSPResp = (BasicOCSPResp) ocspResponse.getResponseObject();
+            Optional<Extension> nonceExtension = Optional.ofNullable(basicOCSPResp.getExtension(id_pkix_ocsp_nonce));
+            BigInteger foundNonce = nonceExtension
+                    .map(nonceReceived -> new BigInteger(nonceReceived.getExtnValue().getOctets()))
+                    .orElse(null);
 
             if (!Objects.equals(foundNonce, expectedNonceValue)) {
-                throw new IllegalStateException("Invalid nonce value in OCSP response expected: " + expectedNonceValue
-                        + " received:" + foundNonce);
+                throw new IllegalStateException(
+                        String.format("Invalid nonce value in OCSP response expected: %s,  received: %s",
+                                expectedNonceValue, foundNonce));
             }
-            if (LOGGER.isDebugEnabled()) {
+
+            return basicOCSPResp;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void debugLog(BasicOCSPResp basicOCSPResp) {
+        if (LOGGER.isDebugEnabled()) {
+
+            try {
                 LOGGER.debug("OCSP Responder's name is " + basicOCSPResp.getResponderId().toASN1Primitive().getName());
                 X509CertificateHolder[] certs = basicOCSPResp.getCerts();
-                boolean signatureValid = basicOCSPResp.isSignatureValid(new BcRSAContentVerifierProviderBuilder(new
-                        DefaultDigestAlgorithmIdentifierFinder()).build(certs[0]));
-                LOGGER.debug("OCSP Responder's signature is valid: " + signatureValid);
-                LOGGER.debug("OCSP Responder's certificate used for signing OCSP response is:\n " + "-----BEGIN " +
-                        "CERTIFICATE-----\n" + new String(Base64.getMimeEncoder().encode(certs[0].getEncoded())) +
-                        "\n" + "-----END CERTIFICATE-----\n");
+                BcRSAContentVerifierProviderBuilder verifierBuilder =
+                        new BcRSAContentVerifierProviderBuilder(new DefaultDigestAlgorithmIdentifierFinder());
+                ContentVerifierProvider verifier = verifierBuilder.build(certs[0]);
+                LOGGER.debug("OCSP Responder's signature is valid: {}", basicOCSPResp.isSignatureValid(verifier));
+                LOGGER.debug("OCSP Responder's certificate used for signing OCSP response is:\n {}\n{}\n{}",
+                        "-----BEGIN CERTIFICATE-----",
+                        new String(Base64.getMimeEncoder().encode(certs[0].getEncoded())),
+                        "-----END CERTIFICATE-----\n");
 
                 SingleResp singleResp = basicOCSPResp.getResponses()[0];
 
@@ -175,9 +196,9 @@ public class OcspRequester {
                 } else {
                     LOGGER.debug("Certificate status is UNKNOWN");
                 }
+            } catch (OCSPException | OperatorCreationException | IOException e) {
+                throw new RuntimeException(e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 
