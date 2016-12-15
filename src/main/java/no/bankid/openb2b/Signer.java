@@ -49,12 +49,14 @@ public class Signer {
             CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
             generator.addSignerInfoGenerator(infoGeneratorBuilder.build(sha512Signer, signerCert));
             generator.addCertificates(new JcaCertStore(signerCertPath.getCertificates()));
-            if (ocspResponse.isPresent()) {
-                LOGGER.info("EMBEDS an OCSP Response in the result");
-                generator.addOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response, ocspResponse.get());
-            } else {
-                LOGGER.info("NO OCSP Response in the result");
-            }
+
+            ocspResponse.ifPresent(response ->
+                    generator.addOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response, response));
+
+            LOGGER.info(ocspResponse
+                    .map(response -> "EMBEDS an OCSP Response in the result")
+                    .orElse("NO OCSP Response in the result"));
+
             CMSSignedData cmsSignedData = generator.generate(new CMSProcessableByteArray(dataToBeSigned), false);
 
             return Base64.getEncoder().encode(cmsSignedData.getEncoded());
