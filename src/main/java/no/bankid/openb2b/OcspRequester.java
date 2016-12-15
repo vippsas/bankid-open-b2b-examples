@@ -18,7 +18,6 @@ import org.bouncycastle.cert.ocsp.*;
 import org.bouncycastle.operator.DefaultDigestAlgorithmIdentifierFinder;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.bc.BcRSAContentVerifierProviderBuilder;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.bouncycastle.x509.extension.X509ExtensionUtil;
 import org.slf4j.Logger;
@@ -37,7 +36,7 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.X509Certificate;
 import java.util.*;
 
-import static no.bankid.openb2b.Algorithms.SHA512withRSA;
+import static no.bankid.openb2b.SecurityProvider.SHA_512_WITH_RSA_SIGNER_BUILDER;
 import static no.bankid.openb2b.SecurityProvider.toCertificateHolders;
 
 /**
@@ -79,7 +78,7 @@ public class OcspRequester {
                 LOGGER.info("Using '{}' as requestor name", requestorName);
                 // Mandatory to set the requestorname
                 ocspReqBuilder.setRequestorName(requestorName);
-                ocspReq = ocspReqBuilder.build(new JcaContentSignerBuilder(SHA512withRSA.name()).build(signerKey),
+                ocspReq = ocspReqBuilder.build(SHA_512_WITH_RSA_SIGNER_BUILDER.build(signerKey),
                         x509CertificateHolders.toArray(new X509CertificateHolder[signerChain.size()]));
             } else {
                 ocspReq = ocspReqBuilder.build();

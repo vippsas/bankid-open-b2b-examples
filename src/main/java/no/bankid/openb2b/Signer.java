@@ -10,7 +10,6 @@ import org.bouncycastle.cms.CMSSignedDataGenerator;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.DigestCalculatorProvider;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +19,7 @@ import java.security.cert.CertPath;
 import java.util.Base64;
 import java.util.Optional;
 
-import static no.bankid.openb2b.Algorithms.SHA512withRSA;
+import static no.bankid.openb2b.SecurityProvider.SHA_512_WITH_RSA_SIGNER_BUILDER;
 import static no.bankid.openb2b.SecurityProvider.toCertificateHolder;
 
 /**
@@ -30,14 +29,12 @@ public class Signer {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Signer.class);
 
-    private static final JcaContentSignerBuilder SHA_512_WITH_RSA_SIGNER_BUILDER =
-            new JcaContentSignerBuilder(SHA512withRSA.name());
-
 
     public static byte[] sign(byte[] dataToBeSigned,
                               CertPath signerCertPath,
                               PrivateKey signerKey,
-                              Optional<OCSPResponse> ocspResponse) {
+                              @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<OCSPResponse>
+                                      ocspResponse) {
         try {
             LOGGER.info("Signs a message");
 
