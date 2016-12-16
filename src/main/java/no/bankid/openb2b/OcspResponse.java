@@ -12,11 +12,11 @@ class OcspResponse {
         this.ocspResponse = ocspResponse == null ? null : OCSPResponse.getInstance(ocspResponse);
     }
 
-    public Optional<OCSPResponse> getValue() {
+    Optional<OCSPResponse> getValue() {
         return Optional.ofNullable(ocspResponse);
     }
 
-    public static OcspResponse empty() {
+    static OcspResponse empty() {
         return new OcspResponse(null);
     }
 }

@@ -31,7 +31,7 @@ public class ReceiverVerifiesBankIDStatusIT {
     private static final byte[] DTBS = "Hello World".getBytes(StandardCharsets.UTF_8);
 
     @Rule
-    public TestName testName = new TestName();
+    public final TestName testName = new TestName();
 
     @Before
     public void logNewline() {

@@ -11,22 +11,16 @@ import java.util.Optional;
 
 class VerifiedSignature {
 
-    private final CMSSignedData signedData;
     private final CertPath certPath;
     private final OCSPResponse ocspResponse;
 
     VerifiedSignature(CMSSignedData signedData, CertPath certPath) {
-        this.signedData = signedData;
         this.certPath = certPath;
 
         @SuppressWarnings("unchecked") Collection<DERSequence> revokationInfo = signedData
                 .getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response)
                 .getMatches(null);
         ocspResponse = revokationInfo.isEmpty() ? null : OCSPResponse.getInstance(revokationInfo.iterator().next());
-    }
-
-    CMSSignedData getSignedData() {
-        return signedData;
     }
 
     CertPath getCertPath() {

@@ -3,6 +3,7 @@ package no.bankid.openb2b;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.cert.*;
 import java.util.*;
@@ -31,7 +32,7 @@ class BankIDStatusChecker {
         ocspRequester = new OcspRequester();
     }
 
-    BankIDStatus checkCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) throws Exception {
+    BankIDStatus checkCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) {
 
         if (!verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking revocation state by asking VA");
@@ -45,12 +46,16 @@ class BankIDStatusChecker {
         return BankIDStatus.NOT_VERIFIED;
     }
 
-    BankIDStatus checkCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws Exception {
+    BankIDStatus checkCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws IOException {
 
         if (verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking embedded OCSP response");
             byte[] ocspResponse = verifiedSignature.getOcspResponse().get().getEncoded();
-            validateCertPathAndOcspResponseOffline(verifiedSignature.getCertPath(), ocspResponse);
+            try {
+                validateCertPathAndOcspResponseOffline(verifiedSignature.getCertPath(), ocspResponse);
+            } catch (Exception e) {
+                return BankIDStatus.NOT_VERIFIED;
+            }
             return BankIDStatus.VERIFIED_OFFLINE;
         }
 
@@ -58,7 +63,7 @@ class BankIDStatusChecker {
         return BankIDStatus.NOT_VERIFIED;
     }
 
-    OcspResponse fetchOcspResponse(CertPath targetPath) throws Exception {
+    OcspResponse fetchOcspResponse(CertPath targetPath) {
 
         X509Certificate targetCertIssuer = (X509Certificate) targetPath.getCertificates().get(1);
         X509Certificate targetCert = (X509Certificate) targetPath.getCertificates().get(0);
