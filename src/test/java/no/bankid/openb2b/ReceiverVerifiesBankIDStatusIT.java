@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertPath;
 import java.util.Optional;
 
+import static java.util.Optional.empty;
 import static no.bankid.openb2b.BankIDStatus.NOT_VERIFIED;
 import static no.bankid.openb2b.BankIDStatus.VERIFIED_ONLINE;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
@@ -46,7 +47,7 @@ public class ReceiverVerifiesBankIDStatusIT {
 
         // Given: Merchant A signs data and creates a detached signature, without OCSP check.
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(merchantA.getCertList());
-        byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, merchantA.getPrivateKey(), OcspResponse.empty());
+        byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, merchantA.getPrivateKey(), empty());
 
 
         // When: Merchant A sends data and detached signature to Merchant B over the wire (not shown here).

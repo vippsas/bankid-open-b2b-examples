@@ -36,8 +36,8 @@ class BankIDStatusChecker {
 
         if (!verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking revocation state by asking VA");
-            OcspResponse ocspResponse = fetchOcspResponse(verifiedSignature.getCertPath());
-            return ocspResponse.getValue()
+            Optional<byte[]> ocspResponse = fetchOcspResponse(verifiedSignature.getCertPath());
+            return ocspResponse
                     .map(response -> BankIDStatus.VERIFIED_ONLINE)
                     .orElse(BankIDStatus.NOT_VERIFIED);
         }
@@ -63,7 +63,7 @@ class BankIDStatusChecker {
         return BankIDStatus.NOT_VERIFIED;
     }
 
-    OcspResponse fetchOcspResponse(CertPath targetPath) {
+    Optional<byte[]> fetchOcspResponse(CertPath targetPath) {
 
         X509Certificate targetCertIssuer = (X509Certificate) targetPath.getCertificates().get(1);
         X509Certificate targetCert = (X509Certificate) targetPath.getCertificates().get(0);
@@ -75,10 +75,10 @@ class BankIDStatusChecker {
         try {
             validateCertPathAndOcspResponseOffline(targetPath, ocspResponse);
         } catch (Exception e) {
-            return OcspResponse.empty();
+            return Optional.empty();
         }
 
-        return new OcspResponse(ocspResponse);
+        return Optional.of(ocspResponse);
     }
 
     private void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse) throws Exception {

@@ -15,6 +15,7 @@ import java.security.cert.Certificate;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Optional.empty;
 import static no.bankid.openb2b.BankIDStatus.NOT_VERIFIED;
 import static no.bankid.openb2b.BankIDStatus.VERIFIED_OFFLINE;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
@@ -52,7 +53,7 @@ public class SenderVerifiesBankIDStatusIT {
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(senderCertList);
         PrivateKey senderSignKey = merchantA.getPrivateKey();
         BankIDStatusChecker statusCheckerA = new BankIDStatusChecker(env, senderSignKey, senderCertList);
-        OcspResponse ocspResponse = statusCheckerA.fetchOcspResponse(senderCertPath);
+        Optional<byte[]> ocspResponse = statusCheckerA.fetchOcspResponse(senderCertPath);
         byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, senderSignKey, ocspResponse);
 
 
@@ -77,7 +78,7 @@ public class SenderVerifiesBankIDStatusIT {
 
         // Given: Merchant A signs data and creates a detached signature, without OCSP check.
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(merchantA.getCertList());
-        byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, merchantA.getPrivateKey(), OcspResponse.empty());
+        byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, merchantA.getPrivateKey(), empty());
 
 
         // When: Merchant A sends data and detached signature to Merchant B over the wire (not shown here).
