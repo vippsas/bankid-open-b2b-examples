@@ -68,7 +68,7 @@ public class SenderVerifiesBankIDStatusIT {
         Assert.assertTrue(verifiedSignature.isPresent());
         BankIDStatusChecker statusCheckerB =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatusOk = statusCheckerB.validateCertPathAndOcspResponseOffline(verifiedSignature.get());
+        BankIDStatus bankIdStatusOk = statusCheckerB.checkCertPathAndOcspResponseOffline(verifiedSignature.get());
         Assert.assertEquals(VERIFIED_OFFLINE, bankIdStatusOk);
     }
 
@@ -93,7 +93,7 @@ public class SenderVerifiesBankIDStatusIT {
         Assert.assertTrue(verifiedSignature.isPresent());
         BankIDStatusChecker statusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatus = statusChecker.validateCertPathAndOcspResponseOffline(verifiedSignature.get());
+        BankIDStatus bankIdStatus = statusChecker.checkCertPathAndOcspResponseOffline(verifiedSignature.get());
         Assert.assertEquals(NOT_VERIFIED, bankIdStatus);
     }
 

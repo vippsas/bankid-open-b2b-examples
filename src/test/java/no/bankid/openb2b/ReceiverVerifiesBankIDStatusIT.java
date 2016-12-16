@@ -60,7 +60,7 @@ public class ReceiverVerifiesBankIDStatusIT {
         Assert.assertTrue(verifiedSignature.isPresent());
         BankIDStatusChecker statusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatus = statusChecker.validateCertPathAndOcspResponseOnline(verifiedSignature.get());
+        BankIDStatus bankIdStatus = statusChecker.checkCertPathAndOcspResponseOnline(verifiedSignature.get());
         Assert.assertEquals(VERIFIED_ONLINE, bankIdStatus);
     }
 }

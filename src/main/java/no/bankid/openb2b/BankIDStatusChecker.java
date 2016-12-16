@@ -31,7 +31,7 @@ class BankIDStatusChecker {
         ocspRequester = new OcspRequester();
     }
 
-    BankIDStatus validateCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) throws Exception {
+    BankIDStatus checkCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) throws Exception {
 
         if (!verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking revocation state by asking VA");
@@ -43,7 +43,7 @@ class BankIDStatusChecker {
         return BankIDStatus.NOT_VERIFIED;
     }
 
-    BankIDStatus validateCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws Exception {
+    BankIDStatus checkCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws Exception {
 
         if (verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking embedded OCSP response");
