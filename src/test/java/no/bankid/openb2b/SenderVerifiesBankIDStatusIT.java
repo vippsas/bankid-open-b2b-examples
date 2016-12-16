@@ -51,13 +51,18 @@ public class SenderVerifiesBankIDStatusIT {
 
 
         // Then: Merchant B verifies received data with detached signature.
+
+
+        Optional<VerifiedSignature> verifiedSignature =
+                Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature);
+        Assert.assertTrue(verifiedSignature.isPresent());
+
         BankIDStatusChecker receiverStatusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        boolean signatureVerified =
-                Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature, receiverStatusChecker);
 
+        boolean bankIdStatusOk = receiverStatusChecker.validateCertPathAndOcspResponseOffline(verifiedSignature.get());
+        Assert.assertTrue(bankIdStatusOk);
 
-        Assert.assertTrue(signatureVerified);
     }
 
 }

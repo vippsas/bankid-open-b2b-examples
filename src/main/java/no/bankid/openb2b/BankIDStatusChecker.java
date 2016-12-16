@@ -1,5 +1,9 @@
 package no.bankid.openb2b;
 
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
+import org.bouncycastle.asn1.ocsp.OCSPResponse;
+import org.bouncycastle.util.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +33,33 @@ class BankIDStatusChecker {
         this.signerKey = signerKey;
         this.signerCertChain = signerCertChain;
         ocspRequester = new OcspRequester();
+    }
+
+    boolean validateCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) throws Exception {
+        @SuppressWarnings("unchecked") Store<DERSequence> otherRevocationInfoStore =
+                verifiedSignature.getSignedData().getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
+        Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
+
+        if (allOtherRevocationInfos.isEmpty()) {
+            LOGGER.info("Checking revocation state by asking VA");
+            validateCertPathAndOcspResponseOnline(verifiedSignature.getCertPath());
+            return true;
+        }
+        throw new IllegalStateException("Verified signature has an embedded OCSP response, should be verified offline");
+    }
+
+    boolean validateCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws Exception {
+        @SuppressWarnings("unchecked") Store<DERSequence> otherRevocationInfoStore =
+                verifiedSignature.getSignedData().getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
+        Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
+
+        if (!allOtherRevocationInfos.isEmpty()) {
+            LOGGER.info("Checking embedded OCSP response");
+            byte[] ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
+            validateCertPathAndOcspResponseOffline(verifiedSignature.getCertPath(), ocspResponse);
+            return true;
+        }
+        throw new IllegalStateException("Verified signature has no embedded OCSP response, should be verified online");
     }
 
     byte[] validateCertPathAndOcspResponseOnline(CertPath targetPath) throws Exception {

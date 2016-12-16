@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 import java.security.cert.*;
 import java.util.*;
 
+import static java.util.Optional.empty;
+
 class Verifier {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(Verifier.class);
@@ -27,19 +29,19 @@ class Verifier {
     private static final boolean[] KEY_USAGE_NON_REPUDIATION =
             {false, true, false, false, false, false, false, false, false};
 
-    static boolean verifyDetachedSignature(TrustAnchor rootCert,
+    static Optional<VerifiedSignature> verifyDetachedSignature(TrustAnchor rootCert,
                                            byte dtbs[],
-                                           byte[] base64EncodedCMS,
-                                           BankIDStatusChecker bankIDStatusChecker) throws Exception {
+                                           byte[] base64EncodedCMS
+                                           ) throws Exception {
 
         byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
         CMSSignedData signedData = new CMSSignedData(new CMSProcessableByteArray(dtbs), cmsBytesBlock);
         CertStore certsAndCRLs = new JcaCertStoreBuilder().addCertificates(signedData.getCertificates()).build();
         SignerInformationStore signers = signedData.getSignerInfos();
-        Iterator it = signers.getSigners().iterator();
+        Iterator<SignerInformation> it = signers.getSigners().iterator();
 
         if (it.hasNext()) {
-            SignerInformation signer = (SignerInformation) it.next();
+            SignerInformation signer = it.next();
             X509CertSelector signerConstraints = new JcaX509CertSelectorConverter().getCertSelector(signer.getSID());
             // BankID sign certs has 'non_repudiation', not 'digitalSignature'.
             signerConstraints.setKeyUsage(KEY_USAGE_NON_REPUDIATION);
@@ -48,23 +50,11 @@ class Verifier {
             X509Certificate signerCertificate = (X509Certificate) certificates.get(0);
             LOGGER.info("Message was signed by '{}'", signerCertificate.getSubjectX500Principal().getName("RFC1779"));
 
-            @SuppressWarnings("unchecked") Store<DERSequence> otherRevocationInfoStore =
-                    signedData.getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
-            Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
-
-            if (allOtherRevocationInfos.isEmpty()) {
-                LOGGER.info("Checking revocation state by asking VA");
-                bankIDStatusChecker.validateCertPathAndOcspResponseOnline(certPath);
-            } else {
-                LOGGER.info("Checking embedded OCSP response");
-                byte[] ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
-                bankIDStatusChecker.validateCertPathAndOcspResponseOffline(certPath, ocspResponse);
-            }
-
-            return signer.verify(new JcaSimpleSignerInfoVerifierBuilder().build(signerCertificate));
+            return signer.verify(new JcaSimpleSignerInfoVerifierBuilder().build(signerCertificate)) ?
+                    Optional.of(new VerifiedSignature( signedData, certPath)) : empty();
         }
 
-        return false;
+        return empty();
     }
 
     private static CertPath buildPath(TrustAnchor rootCert, X509CertSelector endConstraints, CertStore certsAndCRLs)
