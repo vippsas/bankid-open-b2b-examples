@@ -58,7 +58,7 @@ class OcspRequester {
         }
 
         OCSPReq ocspReq;
-        BigInteger nonce = BigInteger.valueOf(System.currentTimeMillis());
+        BigInteger replayAttackNonce = BigInteger.valueOf(System.currentTimeMillis());
         try {
 
             OCSPReqBuilder ocspReqBuilder = new OCSPReqBuilder();
@@ -71,7 +71,7 @@ class OcspRequester {
             ocspReqBuilder.addRequest(id);
 
             // Place a nonce in the request, to prevent replay attack
-            Extension ocspNonce = new Extension(id_pkix_ocsp_nonce, false, nonce.toByteArray());
+            Extension ocspNonce = new Extension(id_pkix_ocsp_nonce, false, replayAttackNonce.toByteArray());
             ocspReqBuilder.setRequestExtensions(new Extensions(ocspNonce));
 
             // Mandatory to set the requestorname
@@ -99,7 +99,7 @@ class OcspRequester {
             throw new IllegalStateException("Invalid OCSP status " + ocspResp.getStatus());
         }
 
-        BasicOCSPResp basicOCSPResp = checkNonce(ocspResp, nonce);
+        BasicOCSPResp basicOCSPResp = checkReplayAttackNonce(ocspResp, replayAttackNonce);
         debugLog(basicOCSPResp);
 
         return ocspResponseBytes;
@@ -148,8 +148,7 @@ class OcspRequester {
         }
     }
 
-    // TODO: Delete if not necessary/relevant?
-    private BasicOCSPResp checkNonce(OCSPResp ocspResponse, BigInteger expectedNonceValue) {
+    private BasicOCSPResp checkReplayAttackNonce(OCSPResp ocspResponse, BigInteger expectedNonceValue) {
 
         try {
 
