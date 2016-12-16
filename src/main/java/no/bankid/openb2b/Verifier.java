@@ -1,8 +1,5 @@
 package no.bankid.openb2b;
 
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
-import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.bouncycastle.cert.jcajce.JcaCertStoreBuilder;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
@@ -10,7 +7,6 @@ import org.bouncycastle.cms.SignerInformation;
 import org.bouncycastle.cms.SignerInformationStore;
 import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
 import org.bouncycastle.cms.jcajce.JcaX509CertSelectorConverter;
-import org.bouncycastle.util.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,9 +26,8 @@ class Verifier {
             {false, true, false, false, false, false, false, false, false};
 
     static Optional<VerifiedSignature> verifyDetachedSignature(TrustAnchor rootCert,
-                                           byte dtbs[],
-                                           byte[] base64EncodedCMS
-                                           ) throws Exception {
+                                                               byte dtbs[],
+                                                               byte[] base64EncodedCMS) throws Exception {
 
         byte[] cmsBytesBlock = Base64.getDecoder().decode(base64EncodedCMS);
         CMSSignedData signedData = new CMSSignedData(new CMSProcessableByteArray(dtbs), cmsBytesBlock);
@@ -51,7 +46,7 @@ class Verifier {
             LOGGER.info("Message was signed by '{}'", signerCertificate.getSubjectX500Principal().getName("RFC1779"));
 
             return signer.verify(new JcaSimpleSignerInfoVerifierBuilder().build(signerCertificate)) ?
-                    Optional.of(new VerifiedSignature( signedData, certPath)) : empty();
+                    Optional.of(new VerifiedSignature(signedData, certPath)) : empty();
         }
 
         return empty();

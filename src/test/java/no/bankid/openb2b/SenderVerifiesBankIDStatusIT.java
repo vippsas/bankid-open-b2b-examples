@@ -2,7 +2,10 @@ package no.bankid.openb2b;
 
 import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,6 +16,7 @@ import java.security.cert.Certificate;
 import java.util.List;
 import java.util.Optional;
 
+import static no.bankid.openb2b.BankIDStatus.VERIFIED_OFFLINE;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
 /**
@@ -30,6 +34,13 @@ public class SenderVerifiesBankIDStatusIT {
     private final MerchantB merchantB = new MerchantB();
     private static final byte[] DTBS = "Hello World".getBytes(StandardCharsets.UTF_8);
 
+    @Rule
+    public TestName testName = new TestName();
+
+    @Before
+    public void logNewline() {
+        LOGGER.info("\n{}", testName.getMethodName());
+    }
 
     @Test
     public void happyDayScenario() throws Exception {
@@ -40,8 +51,8 @@ public class SenderVerifiesBankIDStatusIT {
         List<Certificate> senderCertList = merchantA.getCertList();
         CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(senderCertList);
         PrivateKey senderSignKey = merchantA.getPrivateKey();
-        BankIDStatusChecker senderStatusChecker = new BankIDStatusChecker(env, senderSignKey, senderCertList);
-        byte[] ocspResponseBytes = senderStatusChecker.validateCertPathAndOcspResponseOnline(senderCertPath);
+        BankIDStatusChecker statusCheckerA = new BankIDStatusChecker(env, senderSignKey, senderCertList);
+        byte[] ocspResponseBytes = statusCheckerA.fetchOcspResponse(senderCertPath);
         Optional<OCSPResponse> ocspResponse = Optional.of(OCSPResponse.getInstance(ocspResponseBytes));
         byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, senderSignKey, ocspResponse);
 
@@ -51,18 +62,13 @@ public class SenderVerifiesBankIDStatusIT {
 
 
         // Then: Merchant B verifies received data with detached signature.
-
-
         Optional<VerifiedSignature> verifiedSignature =
                 Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature);
         Assert.assertTrue(verifiedSignature.isPresent());
-
-        BankIDStatusChecker receiverStatusChecker =
+        BankIDStatusChecker statusCheckerB =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-
-        boolean bankIdStatusOk = receiverStatusChecker.validateCertPathAndOcspResponseOffline(verifiedSignature.get());
-        Assert.assertTrue(bankIdStatusOk);
-
+        BankIDStatus bankIdStatusOk = statusCheckerB.validateCertPathAndOcspResponseOffline(verifiedSignature.get());
+        Assert.assertEquals(VERIFIED_OFFLINE, bankIdStatusOk);
     }
 
 }

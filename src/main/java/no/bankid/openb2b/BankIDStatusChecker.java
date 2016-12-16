@@ -1,9 +1,5 @@
 package no.bankid.openb2b;
 
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
-import org.bouncycastle.asn1.ocsp.OCSPResponse;
-import org.bouncycastle.util.Store;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,34 +31,32 @@ class BankIDStatusChecker {
         ocspRequester = new OcspRequester();
     }
 
-    boolean validateCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) throws Exception {
-        @SuppressWarnings("unchecked") Store<DERSequence> otherRevocationInfoStore =
-                verifiedSignature.getSignedData().getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
-        Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
+    BankIDStatus validateCertPathAndOcspResponseOnline(VerifiedSignature verifiedSignature) throws Exception {
 
-        if (allOtherRevocationInfos.isEmpty()) {
+        if (!verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking revocation state by asking VA");
-            validateCertPathAndOcspResponseOnline(verifiedSignature.getCertPath());
-            return true;
+            fetchOcspResponse(verifiedSignature.getCertPath());
+            return BankIDStatus.VERIFIED_ONLINE;
         }
-        throw new IllegalStateException("Verified signature has an embedded OCSP response, should be verified offline");
+
+        LOGGER.info("Verified signature has an embedded OCSP response, should be verified offline");
+        return BankIDStatus.NOT_VERIFIED;
     }
 
-    boolean validateCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws Exception {
-        @SuppressWarnings("unchecked") Store<DERSequence> otherRevocationInfoStore =
-                verifiedSignature.getSignedData().getOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response);
-        Collection<DERSequence> allOtherRevocationInfos = otherRevocationInfoStore.getMatches(null);
+    BankIDStatus validateCertPathAndOcspResponseOffline(VerifiedSignature verifiedSignature) throws Exception {
 
-        if (!allOtherRevocationInfos.isEmpty()) {
+        if (verifiedSignature.getOcspResponse().isPresent()) {
             LOGGER.info("Checking embedded OCSP response");
-            byte[] ocspResponse = OCSPResponse.getInstance(allOtherRevocationInfos.iterator().next()).getEncoded();
+            byte[] ocspResponse = verifiedSignature.getOcspResponse().get().getEncoded();
             validateCertPathAndOcspResponseOffline(verifiedSignature.getCertPath(), ocspResponse);
-            return true;
+            return BankIDStatus.VERIFIED_OFFLINE;
         }
-        throw new IllegalStateException("Verified signature has no embedded OCSP response, should be verified online");
+
+        LOGGER.info("Verified signature has no embedded OCSP response, should be verified online");
+        return BankIDStatus.NOT_VERIFIED;
     }
 
-    byte[] validateCertPathAndOcspResponseOnline(CertPath targetPath) throws Exception {
+    byte[] fetchOcspResponse(CertPath targetPath) throws Exception {
 
         X509Certificate targetCertIssuer = (X509Certificate) targetPath.getCertificates().get(1);
         X509Certificate targetCert = (X509Certificate) targetPath.getCertificates().get(0);
@@ -76,7 +70,7 @@ class BankIDStatusChecker {
         return ocspResponse;
     }
 
-    void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse) throws Exception {
+    private void validateCertPathAndOcspResponseOffline(CertPath signerPath, byte[] rawOcspResponse) throws Exception {
 
         Map<X509Certificate, byte[]> ocspResponses = new HashMap<>();
         X509Certificate signerCertificate = (X509Certificate) signerPath.getCertificates().get(0);
