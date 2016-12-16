@@ -33,34 +33,34 @@ class BankIDStatusChecker {
     }
 
     BankIDStatus checkOnline(VerifiedSignature verifiedSignature) {
-
-        if (!verifiedSignature.getOcspResponse().isPresent()) {
-            LOGGER.info("Checking revocation state by asking VA");
-            Optional<byte[]> ocspResponse = fetchOcspResponse(verifiedSignature.getCertPath());
-            return ocspResponse
-                    .map(response -> BankIDStatus.VERIFIED_ONLINE)
-                    .orElse(BankIDStatus.NOT_VERIFIED);
-        }
-
-        LOGGER.info("Verified signature has an embedded OCSP response, should be verified offline");
-        return BankIDStatus.NOT_VERIFIED;
+        return verifiedSignature.getOcspResponse()
+                .map(ocspResponse -> {
+                    LOGGER.info("Verified signature has an embedded OCSP response, should be verified offline");
+                    return BankIDStatus.NOT_VERIFIED;
+                })
+                .orElseGet(() -> {
+                    LOGGER.info("Checking revocation state by asking VA");
+                    return fetchOcspResponse(verifiedSignature.getCertPath())
+                            .map(checkedOcspBytes -> BankIDStatus.VERIFIED_ONLINE)
+                            .orElse(BankIDStatus.NOT_VERIFIED);
+                });
     }
 
     BankIDStatus checkOffline(VerifiedSignature verifiedSignature) throws IOException {
-
-        if (verifiedSignature.getOcspResponse().isPresent()) {
-            LOGGER.info("Checking embedded OCSP response");
-            byte[] ocspResponse = verifiedSignature.getOcspResponse().get().getEncoded();
-            try {
-                validateCertPathAndOcspResponseOffline(verifiedSignature.getCertPath(), ocspResponse);
-            } catch (Exception e) {
-                return BankIDStatus.NOT_VERIFIED;
-            }
-            return BankIDStatus.VERIFIED_OFFLINE;
-        }
-
-        LOGGER.info("Verified signature has no embedded OCSP response, should be verified online");
-        return BankIDStatus.NOT_VERIFIED;
+        return verifiedSignature.getOcspResponse()
+                .map(ocpsResponse -> {
+                    LOGGER.info("Checking embedded OCSP response");
+                    try {
+                        validateCertPathAndOcspResponseOffline(verifiedSignature.getCertPath(), ocpsResponse.getEncoded());
+                        return BankIDStatus.VERIFIED_OFFLINE;
+                    } catch (Exception e) {
+                        return BankIDStatus.NOT_VERIFIED;
+                    }
+                })
+                .orElseGet(() -> {
+                    LOGGER.info("Verified signature has no embedded OCSP response, should be verified online");
+                    return BankIDStatus.NOT_VERIFIED;
+                });
     }
 
     Optional<byte[]> fetchOcspResponse(CertPath targetPath) {
