@@ -13,7 +13,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertPath;
 import java.util.Optional;
 
-import static no.bankid.openb2b.BankIDStatus.NOT_VERIFIED;
 import static no.bankid.openb2b.BankIDStatus.VERIFIED_ONLINE;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
@@ -63,30 +62,5 @@ public class ReceiverVerifiesBankIDStatusIT {
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
         BankIDStatus bankIdStatus = statusChecker.validateCertPathAndOcspResponseOnline(verifiedSignature.get());
         Assert.assertEquals(VERIFIED_ONLINE, bankIdStatus);
-    }
-
-    @Test
-    public void bankIDStatusCheckFailsIfSenderHasNotCheckedStatus() throws Exception {
-
-        OcspResponderSslTrust.init(env);
-
-        // Given: Merchant A signs data and creates a detached signature, without OCSP check.
-        CertPath senderCertPath = CERTIFICATE_FACTORY.generateCertPath(merchantA.getCertList());
-        Optional<OCSPResponse> noOcspResponse = Optional.empty();
-        byte[] detachedSignature = Signer.sign(DTBS, senderCertPath, merchantA.getPrivateKey(), noOcspResponse);
-
-
-        // When: Merchant A sends data and detached signature to Merchant B over the wire (not shown here).
-        LOGGER.info("Merchant A sends data and detached signature (without OCSP check) to Merchant B.");
-
-
-        // Then: Merchant B verifies received data with detached signature.
-        Optional<VerifiedSignature> verifiedSignature =
-                Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature);
-        Assert.assertTrue(verifiedSignature.isPresent());
-        BankIDStatusChecker statusChecker =
-                new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatus = statusChecker.validateCertPathAndOcspResponseOffline(verifiedSignature.get());
-        Assert.assertEquals(NOT_VERIFIED, bankIdStatus);
     }
 }
