@@ -1,7 +1,6 @@
 package no.bankid.openb2b;
 
 import org.bouncycastle.asn1.ocsp.OCSPObjectIdentifiers;
-import org.bouncycastle.asn1.ocsp.OCSPResponse;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
 import org.bouncycastle.cms.CMSProcessableByteArray;
@@ -17,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import java.security.PrivateKey;
 import java.security.cert.CertPath;
 import java.util.Base64;
-import java.util.Optional;
 
 import static no.bankid.openb2b.SecurityProvider.SHA_512_WITH_RSA_SIGNER_BUILDER;
 import static no.bankid.openb2b.SecurityProvider.toCertificateHolder;
@@ -33,8 +31,7 @@ class Signer {
     static byte[] sign(byte[] dataToBeSigned,
                        CertPath signerCertPath,
                        PrivateKey signerKey,
-                       @SuppressWarnings("OptionalUsedAsFieldOrParameterType") Optional<OCSPResponse>
-                               ocspResponse) {
+                       OcspResponse ocspResponse) {
         try {
             LOGGER.info("Signs a message");
 
@@ -47,10 +44,10 @@ class Signer {
             generator.addSignerInfoGenerator(infoGeneratorBuilder.build(sha512Signer, signerCert));
             generator.addCertificates(new JcaCertStore(signerCertPath.getCertificates()));
 
-            ocspResponse.ifPresent(response ->
+            ocspResponse.getValue().ifPresent(response ->
                     generator.addOtherRevocationInfo(OCSPObjectIdentifiers.id_pkix_ocsp_response, response));
 
-            LOGGER.info(ocspResponse
+            LOGGER.info(ocspResponse.getValue()
                     .map(response -> "EMBEDS an OCSP Response in the result")
                     .orElse("NO OCSP Response in the result"));
 
