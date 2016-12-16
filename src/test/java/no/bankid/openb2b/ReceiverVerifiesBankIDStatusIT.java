@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.cert.CertPath;
 import java.util.Optional;
 
+import static no.bankid.openb2b.BankIDStatus.NOT_VERIFIED;
 import static no.bankid.openb2b.BankIDStatus.VERIFIED_ONLINE;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
 
@@ -58,7 +59,9 @@ public class ReceiverVerifiesBankIDStatusIT {
         Assert.assertTrue(verifiedSignature.isPresent());
         BankIDStatusChecker statusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatus = statusChecker.checkCertPathAndOcspResponseOnline(verifiedSignature.get());
+        BankIDStatus bankIdStatus = statusChecker.checkCertPathAndOcspResponseOffline(verifiedSignature.get());
+        Assert.assertEquals(NOT_VERIFIED, bankIdStatus);
+        bankIdStatus = statusChecker.checkCertPathAndOcspResponseOnline(verifiedSignature.get());
         Assert.assertEquals(VERIFIED_ONLINE, bankIdStatus);
     }
 }
