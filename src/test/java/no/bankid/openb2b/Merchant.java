@@ -19,6 +19,10 @@ abstract class Merchant {
         return (PrivateKey) getKeyStore().getKey(getKeyAlias(), getKeyPassword());
     }
 
+    protected abstract String getCommonName();
+
+    protected abstract String getOrganizationNumber();
+
     protected abstract String getKeyAlias();
 
     protected abstract char[] getKeyStorePassword();

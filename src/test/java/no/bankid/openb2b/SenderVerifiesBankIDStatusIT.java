@@ -1,6 +1,5 @@
 package no.bankid.openb2b;
 
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -19,6 +18,8 @@ import static java.util.Optional.empty;
 import static no.bankid.openb2b.BankIDStatus.NOT_VERIFIED;
 import static no.bankid.openb2b.BankIDStatus.VERIFIED_OFFLINE;
 import static no.bankid.openb2b.SecurityProvider.CERTIFICATE_FACTORY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Run with -Djava.security.debug="certpath ocsp" to debug.
@@ -64,11 +65,14 @@ public class SenderVerifiesBankIDStatusIT {
         // Then: Merchant B verifies received data with detached signature.
         Optional<VerifiedSignature> verifiedSignature =
                 Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature);
-        Assert.assertTrue(verifiedSignature.isPresent());
+        assertTrue(verifiedSignature.isPresent());
+        @SuppressWarnings("OptionalGetWithoutIsPresent") VerifiedSignature signature = verifiedSignature.get();
         BankIDStatusChecker statusCheckerB =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatusOk = statusCheckerB.checkOffline(verifiedSignature.get());
-        Assert.assertEquals(VERIFIED_OFFLINE, bankIdStatusOk);
+        BankIDStatus bankIdStatusOk = statusCheckerB.checkOffline(signature);
+        assertEquals(VERIFIED_OFFLINE, bankIdStatusOk);
+        assertEquals(merchantA.getCommonName(), signature.getSignerCommonName());
+        assertEquals(merchantA.getOrganizationNumber(), signature.getSignerOrganizationNumber());
     }
 
     @Test
@@ -88,11 +92,14 @@ public class SenderVerifiesBankIDStatusIT {
         // Then: Merchant B verifies received data with detached signature.
         Optional<VerifiedSignature> verifiedSignature =
                 Verifier.verifyDetachedSignature(env.getBankIDRoot(), DTBS, detachedSignature);
-        Assert.assertTrue(verifiedSignature.isPresent());
+        assertTrue(verifiedSignature.isPresent());
+        @SuppressWarnings("OptionalGetWithoutIsPresent") VerifiedSignature signature = verifiedSignature.get();
         BankIDStatusChecker statusChecker =
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
-        BankIDStatus bankIdStatus = statusChecker.checkOffline(verifiedSignature.get());
-        Assert.assertEquals(NOT_VERIFIED, bankIdStatus);
+        BankIDStatus bankIdStatus = statusChecker.checkOffline(signature);
+        assertEquals(NOT_VERIFIED, bankIdStatus);
+        assertEquals(merchantA.getCommonName(), signature.getSignerCommonName());
+        assertEquals(merchantA.getOrganizationNumber(), signature.getSignerOrganizationNumber());
     }
 
 }

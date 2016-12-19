@@ -5,6 +5,16 @@ import java.net.URL;
 public class MerchantB extends Merchant {
 
     @Override
+    protected String getCommonName() {
+        return "Merchant B";
+    }
+
+    @Override
+    protected String getOrganizationNumber() {
+        return "111111111";
+    }
+
+    @Override
     protected String getKeyAlias() {
         return "signkey";
     }
