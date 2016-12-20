@@ -98,8 +98,6 @@ public class SenderVerifiesBankIDStatusIT {
                 new BankIDStatusChecker(env, merchantB.getPrivateKey(), merchantB.getCertList());
         BankIDStatus bankIdStatus = statusChecker.checkOffline(signature);
         assertEquals(NOT_VERIFIED, bankIdStatus);
-        assertEquals(merchantA.getCommonName(), signature.getSignerCommonName());
-        assertEquals(merchantA.getOrganizationNumber(), signature.getSignerOrganizationNumber());
     }
 
 }
