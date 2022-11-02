@@ -11,7 +11,7 @@ public class MerchantA extends Merchant {
 
     @Override
     protected String getOrganizationNumber() {
-        return "111111111";
+        return "999999999";
     }
 
     @Override
